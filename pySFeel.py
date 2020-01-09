@@ -191,11 +191,12 @@ class SFeelParser(Parser):
     @_('NAME ASSIGN expr')
     def statement(self, p):
         self.names[p.NAME] = p.expr
+        return None
 
     @_('expr')
     def statement(self, p):
         if p.expr is None:
-            return 'null'
+            return None
         elif isinstance(p.expr, list):
             if len(p.expr) == 1:
                 return p.expr[0]
@@ -203,9 +204,9 @@ class SFeelParser(Parser):
                 return p.expr
         elif isinstance(p.expr, bool):
             if p.expr:
-                return 'true'
+                return True
             else:
-                return 'false'
+                return False
         else:
             return p.expr
 
