@@ -19,11 +19,11 @@ This will return true
 
 USAGE:
 
-   import pySFeel
-   lexer = SFeelLexer()
-   parser = SFeelParser()
-   sfeelText = '7.3 in [2.0 .. 9.1]'
-   retVal = parser.parser(lexer.tokenize(sfeelText))
+    import pySFeel
+    lexer = SFeelLexer()
+    parser = SFeelParser()
+    sfeelText = '7.3 in [2.0 .. 9.1]'
+    retVal = parser.parser(lexer.tokenize(sfeelText))
    
 (retVal will be True)
 
