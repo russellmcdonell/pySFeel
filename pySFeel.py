@@ -11,7 +11,7 @@ import statistics
 
 class SFeelLexer(Lexer):
     tokens = {BOOLEAN, DATEFUNC, TIMEFUNC, DATETIMEFUNC,DATEANDTIMEFUNC,
-              NUMBERFUNC, STRINGFUNC, NOTFUNC,
+              NUMBERFUNC, STRINGFUNC, NOTFUNC, INFUNC,
               SUBSTRINGFUNC, STRINGLENFUNC,UPPERCASEFUNC, LOWERCASEFUNC,
               SUBSTRINGBEFOREFUNC, SUBSTRINGAFTERFUNC,
               REPLACEFUNC, CONTAINSFUNC, STARTSWITHFUNC, ENDSWITHFUNC, MATCHESFUNC, SPLITFUNC,
@@ -27,7 +27,7 @@ class SFeelLexer(Lexer):
               NAME, STRING, NULL,
               LBRACKET, RBRACKET,
               EQUALS, NOTEQUALS, LTTHANEQUAL, GTTHANEQUAL, LTTHAN, GTTHAN,
-              AND, OR, NOT,
+              AND, OR, NOT, BETWEEN,
               PLUS, MINUS, MULTIPY, DIVIDE, EXPONENT,
               ELLIPSE, COMMA, DATETIME, DATE, TIME, DTDURATION, YMDURATION,
               NUMBER,
@@ -46,6 +46,7 @@ class SFeelLexer(Lexer):
     NUMBERFUNC = r'number\('
     STRINGFUNC = r'string\('
     NOTFUNC = r'not\('
+    INFUNC = r'in\s*\('
     SUBSTRINGFUNC = r'substring\('
     STRINGLENFUNC = r'string length\('
     UPPERCASEFUNC = r'upper case\('
@@ -120,6 +121,7 @@ class SFeelLexer(Lexer):
     NAME['and'] = AND
     NAME['or'] = OR
     NAME['not'] = NOT
+    NAME['between'] = BETWEEN
     NAME['null'] = NULL
     NAME['item'] = ITEM
 
@@ -140,6 +142,7 @@ class SFeelLexer(Lexer):
     AND = r'and'
     OR = r'or'
     NOT = r'not'
+    BETWEEN = r'between'
     PLUS = r'\+'
     MINUS = r'-'
     EXPONENT = r'\*\*'
@@ -165,8 +168,9 @@ class SFeelLexer(Lexer):
         self.lineno += t.value.count('\n')
 
     def error(self, t):
-        print("Illegal character '%s'" % t.value[0])
+        t.value = "Illegal character '{!s}'".format(t.value[0])
         self.index += 1
+        return t
 
 class SFeelParser(Parser):
     # debugfile = 'parser.out'
@@ -178,7 +182,7 @@ class SFeelParser(Parser):
         ('left', MULTIPY, DIVIDE),
         ('left', EXPONENT),
         ('right', UMINUS),
-        ('left', AND, OR, NOT),
+        ('left', AND, OR, NOT, BETWEEN),
         ('left', LBRACKET, COMMA, RBRACKET),
         ('left', LPAREN, RPAREN),
         ('left', IN),
@@ -187,6 +191,17 @@ class SFeelParser(Parser):
 
     def __init__(self):
         self.names = { }
+        self.errors = []
+        self.lexer = SFeelLexer()
+
+    def clearErrors(self):
+        self.errors = []
+        return
+
+    def collectErrors(self):
+        knownErrors = self.errors
+        self.errors = []
+        return knownErrors
 
     @_('NAME ASSIGN expr')
     def statement(self, p):
@@ -552,7 +567,10 @@ class SFeelParser(Parser):
     @_('expr LTTHANEQUAL expr')
     def expr(self, p):
         if (isinstance(p.expr0, list) and (len(p.expr0) == 1)):
-            return p.expr0[0] <= p.expr1
+            if (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
+                return p.expr0[0] <= p.expr1[0]
+            else:
+                return p.expr0[0] <= p.expr1
         elif (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
             return p.expr0 <= p.expr1[0]
         else:
@@ -561,7 +579,10 @@ class SFeelParser(Parser):
     @_('expr LTTHAN expr')
     def expr(self, p):
         if (isinstance(p.expr0, list) and (len(p.expr0) == 1)):
-            return p.expr0[0] < p.expr1
+            if (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
+                return p.expr0[0] < p.expr1[0]
+            else:
+                return p.expr0[0] < p.expr1
         elif (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
             return p.expr0 < p.expr1[0]
         else:
@@ -570,7 +591,10 @@ class SFeelParser(Parser):
     @_('expr GTTHANEQUAL expr')
     def expr(self, p):
         if (isinstance(p.expr0, list) and (len(p.expr0) == 1)):
-            return p.expr0[0] >= p.expr1
+            if (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
+                return p.expr0[0] >= p.expr1[0]
+            else:
+                return p.expr0[0] >= p.expr1
         elif (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
             return p.expr0 >= p.expr1[0]
         else:
@@ -579,24 +603,54 @@ class SFeelParser(Parser):
     @_('expr GTTHAN expr')
     def expr(self, p):
         if (isinstance(p.expr0, list) and (len(p.expr0) == 1)):
-            return p.expr0[0] > p.expr1
+            if (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
+                return p.expr0[0] > p.expr1[0]
+            else:
+                return p.expr0[0] > p.expr1
         elif (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
             return p.expr0 > p.expr1[0]
         else:
             return p.expr0 > p.expr1
 
-    @_('expr AND expr')
+    @_('expr BETWEEN expr')
+    def betweenExpr(self, p):
+        return (p.expr0, p.expr1)
+
+    @_('AND expr')
+    def andExpr(self, p):
+        return p.expr
+
+    @_('betweenExpr andExpr')
     def expr(self, p):
-        if isinstance(p.expr0, bool):
-            if isinstance(p.expr1, bool):
-                return p.expr0 and p.expr1  # True/True, True/False, False/True, False/False
-            elif p.expr0:       # True/Otherwise
+        (expr0, expr1) = p.betweenExpr
+        if (isinstance(expr0, list) and (len(expr0) == 1)):
+            if (isinstance(expr1, list) and (len(expr1) == 1)):
+                if (isinstance(p.andExpr, list) and (len(p.andExpr) == 1)):
+                    return (expr0[0] > expr1[0]) and (expr0[0] < p.andExpr[0])
+            else:
+                    return (expr0[0] > expr1[0]) and (expr0[0] < p.andExpr)
+        elif (isinstance(expr1, list) and (len(expr1) == 1)):
+            if (isinstance(p.andExpr, list) and (len(p.andExpr) == 1)):
+                return (expr0 > expr1[0]) and (expr0 < p.andExpr[0])
+            else:
+                return (expr0 > expr1[0]) and (expr0 < p.andExpr)
+        elif (isinstance(p.andExpr, list) and (len(p.andExpr) == 1)):
+            return (expr0 > expr1) and (expr0 < p.andExpr[0])
+        else:
+            return (expr0 > expr1) and (expr0 < p.andExpr)
+
+    @_('expr andExpr')
+    def expr(self, p):
+        if isinstance(p.expr, bool):
+            if isinstance(p.andExpr, bool):
+                return p.expr and p.andExpr  # True/True, True/False, False/True, False/False
+            elif p.expr:       # True/Otherwise
                 return None
             else:               # False/Otherwise
                 return False
         else:
-            if isinstance(p.expr1, bool):
-                if p.expr1:     # Otherwise/True
+            if isinstance(p.andExpr, bool):
+                if p.andExpr:     # Otherwise/True
                     return None
                 else:           # Otherwise/False
                     return False
@@ -859,6 +913,194 @@ class SFeelParser(Parser):
         if not isinstance(p.expr, bool):
             return None
         return not p.expr
+
+    def inFunc(self, thisList):
+        inValue = thisList[0]
+        for i in range(1,len(thisList)):
+            (comparitor, toValue) = thisList[i]
+            if comparitor == '=':
+                if inValue == toValue:
+                    return True
+            elif comparitor == '<=':
+                if inValue <= toValue:
+                    return True
+            elif comparitor == '<':
+                if inValue < toValue:
+                    return True
+            elif comparitor == '>=':
+                if inValue >= toValue:
+                    return True
+            elif comparitor == '>':
+                if inValue > toValue:
+                    return True
+            elif comparitor == '!=':
+                if inValue != toValue:
+                    return True
+        return False
+
+    @_('expr INFUNC expr')
+    def inStart(self, p):
+        ''' item in list items'''
+        if isinstance(p.expr1, list):
+            thisList = p.expr1
+            for i in range(len(thisList)):
+                thisList[i] = [('=', thisList[i])]
+            return [p.expr0] + thisList
+        else:
+            return [p.expr0] + [('=', p.expr1)]
+
+    @_('expr INFUNC LTTHANEQUAL expr')
+    def inStart(self, p):
+        ''' item in list items'''
+        if isinstance(p.expr1, list):
+            thisList = p.expr1
+            for i in range(len(thisList)):
+                thisList[i] = [('<=', thisList[i])]
+            return [p.expr0] + thisList
+        else:
+            return [p.expr0] + [('<=', p.expr1)]
+
+    @_('expr INFUNC LTTHAN expr')
+    def inStart(self, p):
+        ''' item in list items'''
+        if isinstance(p.expr1, list):
+            thisList = p.expr1
+            for i in range(len(thisList)):
+                thisList[i] = [('<', thisList[i])]
+            return [p.expr0] + thisList
+        else:
+            return [p.expr0] + [('<', p.expr1)]
+
+    @_('expr INFUNC GTTHANEQUAL expr')
+    def inStart(self, p):
+        ''' item in list items'''
+        if isinstance(p.expr1, list):
+            thisList = p.expr1
+            for i in range(len(thisList)):
+                thisList[i] = [('>=', thisList[i])]
+            return [p.expr0] + thisList
+        else:
+            return [p.expr0] + [('>=', p.expr1)]
+
+    @_('expr INFUNC GTTHAN expr')
+    def inStart(self, p):
+        ''' item in list items'''
+        if isinstance(p.expr1, list):
+            thisList = p.expr1
+            for i in range(len(thisList)):
+                thisList[i] = [('>', thisList[i])]
+            return [p.expr0] + thisList
+        else:
+            return [p.expr0] + [('>', p.expr1)]
+
+    @_('expr INFUNC NOTEQUALS expr')
+    def inStart(self, p):
+        ''' item in list items'''
+        if isinstance(p.expr1, list):
+            thisList = p.expr1
+            for i in range(len(thisList)):
+                thisList[i] = [('!=', thisList[i])]
+            return [p.expr0] + thisList
+        else:
+            return [p.expr0] + [('!=', p.expr1)]
+
+    @_('COMMA LTTHANEQUAL expr')
+    def inPart(self, p):
+        if isinstance(p.expr, list):
+            thisList = p.expr
+            for i in range(len(thisList)):
+                thisList[i] = [('<=', thisList[i])]
+            return thisList
+        else:
+            return [('<=', p.expr)]
+
+    @_('COMMA LTTHAN expr')
+    def inPart(self, p):
+        if isinstance(p.expr, list):
+            thisList = p.expr
+            for i in range(len(thisList)):
+                thisList[i] = [('<', thisList[i])]
+            return thisList
+        else:
+            return [('<=', p.expr)]
+
+    @_('COMMA GTTHANEQUAL expr')
+    def inPart(self, p):
+        if isinstance(p.expr, list):
+            thisList = p.expr
+            for i in range(len(thisList)):
+                thisList[i] = [('>=', thisList[i])]
+            return thisList
+        else:
+            return [('<=', p.expr)]
+
+    @_('COMMA GTTHAN expr')
+    def inPart(self, p):
+        if isinstance(p.expr, list):
+            thisList = p.expr
+            for i in range(len(thisList)):
+                thisList[i] = [('>', thisList[i])]
+            return thisList
+        else:
+            return [('<=', p.expr)]
+
+    @_('COMMA NOTEQUALS expr')
+    def inPart(self, p):
+        if isinstance(p.expr, list):
+            thisList = p.expr
+            for i in range(len(thisList)):
+                thisList[i] = [('!=', thisList[i])]
+            return thisList
+        else:
+            return [('<=', p.expr)]
+
+    @_('inPart COMMA expr')
+    def inPart(self, p):
+        if isinstance(p.expr, list):
+            thisList = p.expr
+            for i in range(len(thisList)):
+                thisList[i] = [('=', thisList[i])]
+            return p.inPart + thisList
+        else:
+            return p.inPart + [('=', p.expr)]
+
+    @_('inPart COMMA listPart')
+    def inPart(self, p):
+        if isinstance(p.listPart, list):
+            thisList = p.listPart
+            for i in range(len(thisList)):
+                thisList[i] = [('=', thisList[i])]
+            return p.inPart + thisList
+        else:
+            return p.inPart + [('=', p.listPart)]
+
+    @_('listPart COMMA inPart')
+    def inPart(self, p):
+        if isinstance(p.listPart, list):
+            thisList = p.listPart
+            for i in range(len(thisList)):
+                thisList[i] = [('=', thisList[i])]
+            return thisList + p.inPart
+        else:
+            return [('=', p.listPart)] + p.inPart
+
+    @_('inStart listPart RPAREN')
+    def expr(self, p):
+        partList = p.listPart
+        for i in range(len(partList)):
+            partList[i] = ('=', partList[i])
+        thisList = p.inStart + partList
+        return self.inFunc(thisList)
+
+    @_('inStart inPart RPAREN')
+    def expr(self, p):
+        thisList = p.inStart + p.inPart
+        return self.inFunc(thisList)
+
+    @_('inStart RPAREN')
+    def expr(self, p):
+        thisList = p.inStart
+        return self.inFunc(thisList)
 
     @_('SUBSTRINGFUNC expr COMMA expr COMMA expr RPAREN')
     def expr(self, p):
@@ -1770,7 +2012,7 @@ class SFeelParser(Parser):
         try:
             return self.names[p.NAME]
         except LookupError:
-            print(f'Undefined name {p.NAME!r}')
+            self.errors.append(f'Undefined name {p.NAME!r}')
             return 0
 
     @_('STRING')
@@ -1871,14 +2113,52 @@ class SFeelParser(Parser):
     def expr(self, p):
         return float(p.NUMBER)
 
+    def error(self, p):
+        if p:
+            self.errors.append("Syntax error at token '{!s}'".format(p.value))
+            tok = next(self.tokens, None)
+            self.errok()
+            return tok
+        else:
+            self.errors.append("Syntax error at EOF")
+            self.errok()
+            return
+
+    def sFeelParse(self, text):
+        '''
+        Parse S-FEEL text)
+        '''
+        if (text == '') or text.isspace():
+            return None
+
+        lexErrors = []
+        tokens = self.lexer.tokenize(text)
+        yaccTokens = []
+        for token in tokens:
+            if token.type == 'ERROR':
+                lexErrors.append(token.value)
+            else:
+                yaccTokens.append(token)
+        self.clearErrors()
+        retVal = self.parse(iter(yaccTokens))
+        yaccErrors = self.collectErrors()
+        status = {}
+        if (len(lexErrors) > 0) or (len(yaccErrors) > 0):
+            status['errors'] = lexErrors + yaccErrors
+        return (status, retVal)
+
 
 if __name__ == '__main__':
-    lexer = SFeelLexer()
     parser = SFeelParser()
     while True:
         try:
             text = input('s-feel+ > ')
-            retVal = parser.parse(lexer.tokenize(text))
-            print(retVal)
         except EOFError:
             break
+
+
+        (status, retVal) = parser.sFeelParse(text)
+
+        print(retVal)
+        if 'errors' in status:
+            print('With errors:', status['errors'])
