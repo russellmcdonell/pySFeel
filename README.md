@@ -27,6 +27,10 @@ There's one extension - an assignment operator (<-)
     fred = bill
 This will return False
 
+    fred <- \[{x:1,y:2},{x:2,y:3}\]
+    (fred).y
+This will return [2,3]
+
 USAGE:
 
     import pySFeel
