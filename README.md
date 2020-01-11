@@ -21,12 +21,14 @@ Similarly, fred.y is **not** the 'y' filter on the List of Contexts named 'fred'
 However (fred).y will is the 'y' filter on the list of Contexts name fred.
 
 There's one extension - an assignment operator (<-)
+
     fred <- 7
     bill <- 9
     fred = bill
 This will return False
 
 USAGE:
+
     import pySFeel
     parser = SFeelParser()
     sfeelText = '7.3 in [2.0 .. 9.1]'
