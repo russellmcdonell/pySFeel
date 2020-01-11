@@ -21,22 +21,18 @@ Similarly, fred.y is **not** the 'y' filter on the List of Contexts named 'fred'
 However (fred).y will is the 'y' filter on the list of Contexts name fred.
 
 There's one extension - an assignment operator (<-)
-
     fred <- 7
     bill <- 9
     fred = bill
-    
 This will return False
 
 USAGE:
-
     import pySFeel
     parser = SFeelParser()
     sfeelText = '7.3 in [2.0 .. 9.1]'
     (status, retVal) = parser.sFeelParse(text)
     if 'errors' in status:
         print('With errors:', status['errors'])
-   
 - retVal will be True
-- The dictonary status will contain the key 'errors' if you have errors in your sfeelText.
+- The dictonary 'status' will have the key 'errors' if you have errors in your sfeelText.
 - status['errors'] is a list of strings. It may help in diagnosing your S-FEEL syntax errors.
