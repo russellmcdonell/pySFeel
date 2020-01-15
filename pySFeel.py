@@ -206,7 +206,7 @@ class SFeelParser(Parser):
     @_('NAME ASSIGN expr')
     def statement(self, p):
         self.names[p.NAME] = p.expr
-        return None
+        return p.expr
 
     @_('expr')
     def statement(self, p):
@@ -217,11 +217,6 @@ class SFeelParser(Parser):
                 return p.expr[0]
             else:
                 return p.expr
-        elif isinstance(p.expr, bool):
-            if p.expr:
-                return True
-            else:
-                return False
         else:
             return p.expr
 
@@ -381,7 +376,10 @@ class SFeelParser(Parser):
     @_('expr EQUALS expr')
     def expr(self, p):
         if (isinstance(p.expr0, list) and (len(p.expr0) == 1)):
-            return p.expr0[0] == p.expr1
+            if (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
+                return p.expr0[0] == p.expr1[0]
+            else:
+                return p.expr0[0] == p.expr1
         elif (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
             return p.expr0 == p.expr1[0]
         else:
@@ -390,7 +388,10 @@ class SFeelParser(Parser):
     @_('expr NOTEQUALS expr')
     def expr(self, p):
         if (isinstance(p.expr0, list) and (len(p.expr0) == 1)):
-            return p.expr0[0] != p.expr1
+            if (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
+                return p.expr0[0] != p.expr1[0]
+            else:
+                return p.expr0[0] != p.expr1
         elif (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
             return p.expr0 != p.expr1[0]
         else:
@@ -881,16 +882,16 @@ class SFeelParser(Parser):
     def expr(self, p):
         ''' string from value'''
         if p.expr == None:
-            return None
-        if isinstance(p.expr, str):
-            return p.expr
-        elif isinstance(p.expr, float):
-            return str(p.expr)
+            return 'null'
         elif isinstance(p.expr, bool):
             if p.expr:
                 return 'true'
             else:
                 return 'false'
+        elif isinstance(p.expr, float):
+            return str(p.expr)
+        if isinstance(p.expr, str):
+            return p.expr
         elif isinstance(p.expr, datetime.date):
             return p.expr.isoformat()
         elif isinstance(p.expr, datetime.datetime):
@@ -2128,6 +2129,7 @@ class SFeelParser(Parser):
         '''
         Parse S-FEEL text)
         '''
+        # print("S-FEEL parsing '{!s}'".format(text))
         if (text == '') or text.isspace():
             return None
 
@@ -2145,6 +2147,7 @@ class SFeelParser(Parser):
         status = {}
         if (len(lexErrors) > 0) or (len(yaccErrors) > 0):
             status['errors'] = lexErrors + yaccErrors
+        # print("S-FEEL returning '{!s}'".format(retVal))
         return (status, retVal)
 
 
