@@ -10,7 +10,7 @@ pySFeel is implemented in Python, using the sly module and has many FEEL feature
 
 pySFeel processes a single S-FEEL statement at a time.
 It is not intended to be a syntacically perfect implemtation of S-FEEL,
-but rather an enabler for an implementation of DMN (Decision Model Notation).
+but rather an enabler for an implementation of DMN (Decision Model Notation) [pyDMNrules](https://github.com/russellmcdonell/pyDMNrules).
 The internal data types are float, string, boolean, datetime.date, datetime.time, and datetime.timedelta.
 The S-FEEL constant null is mapped to None.
 Years and months durations are stored as floats. Days and time durations are stored as datetime.timedelta
