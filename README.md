@@ -1,6 +1,6 @@
 # pySFeel
-An implementation S-FEEL (Simple Expression Language), from DMN (Decision Model Notaion).
-pySFeel is implemented in Python, using the sly module and has many FEEL features.
+An implementation S-FEEL (Simple Expression Language) as specified in the DMN (Decision Model Notation) standard.
+pySFeel is implemented in Python, using the [SLY](https://pypi.org/project/pyDMNrules/) module and has many FEEL features.
 * **not**, **and** and **or** in logical expressions which can be enclosed in round brackets (())
 * in() function, e.g. 5 in(<6)
 * Lists and filters
@@ -9,16 +9,16 @@ pySFeel is implemented in Python, using the sly module and has many FEEL feature
 * Built in functions
 
 pySFeel processes a single S-FEEL statement at a time.
-It is not intended to be a syntacically perfect implemtation of S-FEEL,
-but rather an enabler for an implementation of DMN (Decision Model Notation) [pyDMNrules](https://github.com/russellmcdonell/pyDMNrules).
+It is not intended to be a syntactically perfect implementation of S-FEEL,
+but rather an enabler for an implementation of DMN (Decision Model Notation) [pyDMNrules](https://pypi.org/project/pyDMNrules/).
 The internal data types are float, string, boolean, datetime.date, datetime.time, and datetime.timedelta.
 The S-FEEL constant null is mapped to None.
 Years and months durations are stored as floats. Days and time durations are stored as datetime.timedelta
 
 There is one deliberate deviation from the standard - the key word 'item' in a Context filters is **not** optional.
-\[{x:1,y:2},{x:2,y:3}\]\[x=1\] is not valid, but \[{x:1,y:2},{x:2,y:3}\]\[item x=1\] is valid and will return {x:1,y:2}.
-Similarly, fred.y is **not** the 'y' filter on the List of Contexts named 'fred' [as fred.y is valid name].
-However (fred).y will is the 'y' filter on the list of Contexts name fred.
+\[{x:1,y:2},{x:2,y:3}\]\[x=1\] is not valid (as x=1 is either True or False), but \[{x:1,y:2},{x:2,y:3}\]\[item x=1\] is valid and will return {x:1,y:2}.
+Similarly, fred.y is **not** the 'y' filter on the List of Contexts named 'fred' (as fred.y is a valid name).
+However (fred).y is the 'y' filter on the list of Contexts named fred.
 
 There's one extension - an assignment operator (<-)
 
