@@ -376,14 +376,17 @@ class SFeelParser(Parser):
     @_('expr EQUALS expr')
     def expr(self, p):
         if (isinstance(p.expr0, list) and (len(p.expr0) == 1)):
-            if (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
-                return p.expr0[0] == p.expr1[0]
-            else:
-                return p.expr0[0] == p.expr1
-        elif (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
-            return p.expr0 == p.expr1[0]
+            x0 = p.expr0[0]
         else:
-            return p.expr0 == p.expr1
+            x0 = p.expr0
+        if (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
+            x1 = p.expr1[0]
+        else:
+            x1 = p.expr1
+        try:
+            return x0 == x1
+        except:
+            False
 
     @_('expr NOTEQUALS expr')
     def expr(self, p):
@@ -568,50 +571,62 @@ class SFeelParser(Parser):
     @_('expr LTTHANEQUAL expr')
     def expr(self, p):
         if (isinstance(p.expr0, list) and (len(p.expr0) == 1)):
-            if (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
-                return p.expr0[0] <= p.expr1[0]
-            else:
-                return p.expr0[0] <= p.expr1
-        elif (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
-            return p.expr0 <= p.expr1[0]
+            x0 = p.expr0[0]
         else:
-            return p.expr0 <= p.expr1
+            x0 = p.expr0
+        if (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
+            x1 = p.expr1[0]
+        else:
+            x1 = p.expr1
+        try:
+            return x0 <= x1
+        except:
+            False
 
     @_('expr LTTHAN expr')
     def expr(self, p):
         if (isinstance(p.expr0, list) and (len(p.expr0) == 1)):
-            if (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
-                return p.expr0[0] < p.expr1[0]
-            else:
-                return p.expr0[0] < p.expr1
-        elif (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
-            return p.expr0 < p.expr1[0]
+            x0 = p.expr0[0]
         else:
-            return p.expr0 < p.expr1
+            x0 = p.expr0
+        if (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
+            x1 = p.expr1[0]
+        else:
+            x1 = p.expr1
+        try:
+            return x0 < x1
+        except:
+            False
 
     @_('expr GTTHANEQUAL expr')
     def expr(self, p):
         if (isinstance(p.expr0, list) and (len(p.expr0) == 1)):
-            if (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
-                return p.expr0[0] >= p.expr1[0]
-            else:
-                return p.expr0[0] >= p.expr1
-        elif (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
-            return p.expr0 >= p.expr1[0]
+            x0 = p.expr0[0]
         else:
-            return p.expr0 >= p.expr1
+            x0 = p.expr0
+        if (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
+            x1 = p.expr1[0]
+        else:
+            x1 = p.expr1
+        try:
+            return x0 >= x1
+        except:
+            False
 
     @_('expr GTTHAN expr')
     def expr(self, p):
         if (isinstance(p.expr0, list) and (len(p.expr0) == 1)):
-            if (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
-                return p.expr0[0] > p.expr1[0]
-            else:
-                return p.expr0[0] > p.expr1
-        elif (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
-            return p.expr0 > p.expr1[0]
+            x0 = p.expr0[0]
         else:
-            return p.expr0 > p.expr1
+            x0 = p.expr0
+        if (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
+            x1 = p.expr1[0]
+        else:
+            x1 = p.expr1
+        try:
+            return x0 > x1
+        except:
+            False
 
     @_('expr BETWEEN expr')
     def betweenExpr(self, p):
@@ -920,23 +935,41 @@ class SFeelParser(Parser):
         for i in range(1,len(thisList)):
             (comparitor, toValue) = thisList[i]
             if comparitor == '=':
-                if inValue == toValue:
-                    return True
+                try:
+                    if(inValue == toValue):
+                        return True
+                except:
+                    return False
             elif comparitor == '<=':
-                if inValue <= toValue:
-                    return True
+                try:
+                    if(inValue <= toValue):
+                        return True
+                except:
+                    return False
             elif comparitor == '<':
-                if inValue < toValue:
-                    return True
+                try:
+                    if(inValue < toValue):
+                        return True
+                except:
+                    return False
             elif comparitor == '>=':
-                if inValue >= toValue:
-                    return True
+                try:
+                    if(inValue >= toValue):
+                        return True
+                except:
+                    return False
             elif comparitor == '>':
-                if inValue > toValue:
-                    return True
+                try:
+                    if(inValue > toValue):
+                        return True
+                except:
+                    return False
             elif comparitor == '!=':
-                if inValue != toValue:
-                    return True
+                try:
+                    if(inValue != toValue):
+                        return True
+                except:
+                    return False
         return False
 
     @_('expr INFUNC expr')
@@ -1748,7 +1781,7 @@ class SFeelParser(Parser):
             return None
         if not isinstance(p.expr1, float):
             return None
-        return float(int(p.expr0 * 10**p.expr1))/(10**p.expr1)
+        return float(int(p.expr0 * 10**p.expr1 + 0.5))/(10**p.expr1)
 
     @_('FLOORFUNC expr RPAREN')
     def expr(self, p):
