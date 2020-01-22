@@ -34,9 +34,9 @@ This will return [2,3]
 USAGE:
 
     import pySFeel
-    parser = SFeelParser()
+    parser = pySFeel.SFeelParser()
     sfeelText = '7.3 in [2.0 .. 9.1]'
-    (status, retVal) = parser.sFeelParse(text)
+    (status, retVal) = parser.sFeelParse(sfeelText)
     if 'errors' in status:
         print('With errors:', status['errors'])
 - retVal will be True
