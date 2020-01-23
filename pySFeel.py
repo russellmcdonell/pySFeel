@@ -2159,9 +2159,26 @@ class SFeelParser(Parser):
             return
 
     def sFeelParse(self, text):
-        '''
-        Parse S-FEEL text)
-        '''
+        """
+        Parse S-FEEL text
+
+        This routine parses the passed text, which must be valid S-FEEL
+
+        Args:
+            param1 (str): The S-FEEL text to be parsed
+
+        Returns:
+            tuple: (status, value)
+
+            'status' is alist of any parsing errors.
+
+            'value' is the Python native value of the parsed S-FEEL text.
+
+            For an assignment statement the 'value' will be the Python native value assigned to the named variable.
+
+            For all other expressions the 'value' will be the Python native value of the S-FEEL expression.
+        """
+
         # print("S-FEEL parsing '{!s}'".format(text))
         if (text == '') or text.isspace():
             return None
