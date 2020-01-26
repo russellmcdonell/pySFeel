@@ -4,8 +4,8 @@ with open('README.md', 'r') as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name='pySFeel-pkg-russell.mcdonell',
-    version='0.0.1a2',
+    name='pySFeel',
+    version='0.0.8',
     author='Russell McDonell',
     author_email='russell.mcdonell@c-cost.com',
     description='An implementation of S-FEEL using sly',
@@ -19,6 +19,6 @@ setuptools.setup(
         'Operating System :: OS Independent',
     ],
     python_requires='>=3.6',
-    install_requires=['sly','dateutil','math','statistics'],
+    install_requires=['sly','datetime', 'python-dateutil', 'statistics'],
 )
 
