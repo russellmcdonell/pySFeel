@@ -22,8 +22,8 @@ copyright = '2020, Russell McDonell'
 author = 'Russell McDonell'
 
 # The full version, including alpha/beta/rc tags
-version = '0.0'
-release = '0.0.3.post1'
+version = '0.1'
+release = '0.1.0'
 
 
 master_doc = 'index'
@@ -53,7 +53,7 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+#html_theme = 'alabaster'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
