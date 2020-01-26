@@ -12,7 +12,7 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../pySFeel'))
+sys.path.insert(0, os.path.abspath('../pySFeel/.'))
 
 
 # -- Project information -----------------------------------------------------
@@ -24,6 +24,9 @@ author = 'Russell McDonell'
 # The full version, including alpha/beta/rc tags
 version = '0.0'
 release = '0.0.3.post1'
+
+
+master_doc = 'index'
 
 
 # -- General configuration ---------------------------------------------------
