@@ -42,3 +42,7 @@ USAGE:
 - retVal will be True
 - The dictonary 'status' will have the key 'errors' if you have errors in your sfeelText.
 - status['errors'] is a list of strings. It may help in diagnosing your S-FEEL syntax errors.
+
+Documentation:
+More details can be found at [readthedocs](https://pysfeel.readthedocs.io/en/latest/)
+

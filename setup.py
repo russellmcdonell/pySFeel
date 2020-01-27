@@ -5,10 +5,10 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='pySFeel',
-    version='0.0.8',
+    version='0.1.9',
     author='Russell McDonell',
     author_email='russell.mcdonell@c-cost.com',
-    description='An implementation of S-FEEL using sly',
+    description='An implementation of S-FEEL using SLY (lex and yacc for Python3)',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/russell.mcdonell/pySFeel',
