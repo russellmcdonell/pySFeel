@@ -1,1 +1,1 @@
-# The __init__.py file for the pySFeel module
+from .SFeel import SFeelLexer, SFeelParser
