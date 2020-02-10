@@ -728,15 +728,15 @@ class SFeelParser(Parser):
 
     @_('LPAREN expr ELLIPSE expr RPAREN')
     def expr(self, p):
-        return (p.LPAREN, p.expr0, p.expr1, p.RPAREN)
+        return ('(', p.expr0, p.expr1, p.RPAREN)
 
     @_('LPAREN expr ELLIPSE expr RBRACKET')
     def expr(self, p):
-        return (p.LPAREN, p.expr0, p.expr1, p.RBRACKET)
+        return ('(', p.expr0, p.expr1, p.RBRACKET)
 
     @_('LPAREN expr ELLIPSE expr LBRACKET')
     def expr(self, p):
-        return (p.LPAREN, p.expr0, p.expr1, p.LBRACKET)
+        return ('(', p.expr0, p.expr1, p.LBRACKET)
 
     @_('listStart ELLIPSE expr RPAREN')
     def expr(self, p):
@@ -932,6 +932,28 @@ class SFeelParser(Parser):
 
     def inFunc(self, thisList):
         inValue = thisList[0]
+        if (len(thisList) == 2) and isinstance(thisList[1], tuple) and (len(thisList[1]) == 4):
+            (end0, lowVal, highVal, end1) = thisList[1]
+            if isinstance(inValue, str):
+                if not isinstance(lowVal, str) or not isinstance(highVal, str):
+                    return False
+            elif isinstance(inValue, float):
+                if not isinstance(lowVal, float) or not isinstance(highVal, float):
+                    return False
+            elif isinstance(inValue, datetime.date):
+                if not isinstance(lowVal, datetime.date) or not isinstance(highVal, datetime.date):
+                    return False
+            else:
+                return False
+            if lowVal > inValue:
+                return False
+            if highVal < inValue:
+                return False
+            if (end0 != '[') and (lowVal == inValue):
+                return False
+            if (end1 != ']') and (highVal == inValue):
+                return False
+            return True
         for i in range(1,len(thisList)):
             if not isinstance(thisList[i], tuple):
                 return False
@@ -1136,6 +1158,27 @@ class SFeelParser(Parser):
     @_('inStart RPAREN')
     def expr(self, p):
         thisList = p.inStart
+        return self.inFunc(thisList)
+
+    @_('inStart ELLIPSE expr RPAREN')
+    def expr(self, p):
+        thisList = p.inStart
+        (comparitor, lowVal) = thisList[1]
+        thisList[1] = ('(', lowVal, p.expr, ')')
+        return self.inFunc(thisList)
+
+    @_('inStart ELLIPSE expr RBRACKET')
+    def expr(self, p):
+        thisList = p.inStart
+        (comparitor, lowVal) = thisList[1]
+        thisList[1] = ('(', lowVal, p.expr, ']')
+        return self.inFunc(thisList)
+
+    @_('inStart ELLIPSE expr LBRACKET')
+    def expr(self, p):
+        thisList = p.inStart
+        (comparitor, lowVal) = thisList[1]
+        thisList[1] = ('(', lowVal, p.expr, '[')
         return self.inFunc(thisList)
 
     @_('SUBSTRINGFUNC expr COMMA expr COMMA expr RPAREN')
@@ -1489,6 +1532,14 @@ class SFeelParser(Parser):
             if not isinstance(thisList[i], bool):
                 return None
             if thisList[i]:
+                return True
+        return False
+
+    def anyFunc(self, thisList):
+        if len(thisList) == 0:
+            return False
+        for i in range(len(thisList)):
+            if isinstance(thisList[i], bool) and thisList[i]:
                 return True
         return False
 
@@ -1995,24 +2046,19 @@ class SFeelParser(Parser):
         
     @_('YEARSANDMONTHSDURATIONFUNC expr COMMA expr RPAREN')
     def expr(self, p):
-        ''' Convert datetime.timedelta betwen two dates to float '''
+        ''' Convert datetime.timedelta betwen two dates (from, to) to float '''
         if not isinstance(p.expr0, datetime.date):
             return None
         if not isinstance(p.expr1, datetime.date):
             return None
-        sign = 0
-        months = 0
-        if p.expr0 < p.expr1:
-            months = (p.expr0.year - p.expr1.year) * 12
-            months += p.expr0.month - p.expr1.month
-            sign = -1
-        else:
-            months = (p.expr1.year - p.expr0.year) * 12
-            months += p.expr1.month - p.expr0.month
-        if sign == 0:
-            return float(months)
-        else:
-            return -float(months)
+        months = (p.expr1.year - p.expr0.year) * 12
+        months += p.expr1.month - p.expr0.month
+        if p.expr1.day < p.expr0.day:
+            if p.expr1 > p.expr0:
+                months -= 1
+            else:
+                months += 1
+        return float(months)
 
 
     @_('GETVALUEFUNC expr COMMA NAME RPAREN')
