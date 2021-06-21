@@ -2,6 +2,7 @@
 # SFeel.py
 # -----------------------------------------------------------------------------
 
+from enum import IntFlag
 from sly import Lexer, Parser
 import re
 import datetime
@@ -226,7 +227,7 @@ class SFeelParser(Parser):
 
     @_('expr IN expr')
     def expr(self, p):
-        if isinstance(p.expr1, tuple) :
+        if isinstance(p.expr1, tuple):
             (end0, lowVal, highVal, end1) = p.expr1
             if isinstance(p.expr0, str):
                 if not isinstance(lowVal, str) or not isinstance(highVal, str):
@@ -248,8 +249,33 @@ class SFeelParser(Parser):
             if (end1 != ']') and (highVal == p.expr0):
                 return False
             return True
-        elif isinstance(p.expr1, list) :
-            return p.expr0 in p.expr1
+        elif isinstance(p.expr1, list):
+            for i in range(len(p.expr1)):
+                if isinstance(p.expr1[i], tuple):
+                    (end0, lowVal, highVal, end1) = p.expr1[i]
+                    if isinstance(p.expr0, str):
+                        if not isinstance(lowVal, str) or not isinstance(highVal, str):
+                            continue
+                    elif isinstance(p.expr0, float):
+                        if not isinstance(lowVal, float) or not isinstance(highVal, float):
+                            continue
+                    elif isinstance(p.expr0, datetime.date):
+                        if not isinstance(lowVal, datetime.date) or not isinstance(highVal, datetime.date):
+                            continue
+                    else:
+                        return False
+                    if lowVal > p.expr0:
+                        continue
+                    if highVal < p.expr0:
+                        continue
+                    if (end0 != '[') and (lowVal == p.expr0):
+                        continue
+                    if (end1 != ']') and (highVal == p.expr0):
+                        continue
+                    return True
+                elif p.expr0 == p.expr1[i]:
+                    return True
+            return False
         else:
             return None
 
@@ -281,6 +307,28 @@ class SFeelParser(Parser):
                 return p.expr0 + p.expr1[0]
             else:
                 return None
+        elif isinstance(p.expr0, datetime.timedelta):
+            if isinstance(p.expr1, datetime.timedelta):
+                return p.expr0 + p.expr1
+            elif isinstance(p.expr1, datetime.datetime):
+                if type(p.expr1) is datetime.datetime:
+                    return p.expr0 + p.expr1
+                else:
+                    return (datetime.datetime.combine(p.expr1, datetime.time(hour=0, minute=0)) + p.expr0).date()
+            elif isinstance(p.expr1, datetime.time):
+                return (datetime.datetime.combine(datetime.date(year=1, month=1, day=1), p.expr1) + p.expr0).time()
+            else:
+                return None
+        elif isinstance(p.expr1, datetime.timedelta):
+            if isinstance(p.expr0, datetime.datetime):
+                if type(p.expr0) is datetime.datetime:
+                    return p.expr0 + p.expr1
+                else:
+                    return (datetime.datetime.combine(p.expr0, datetime.time(hour=0, minute=0)) + p.expr1).date()
+            elif isinstance(p.expr0, datetime.time):
+                return (datetime.datetime.combine(datetime.date(year=1, month=1, day=1), p.expr0) + p.expr1).time()
+            else:
+                return None
         else:
             return None
 
@@ -296,6 +344,28 @@ class SFeelParser(Parser):
         elif (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
             if isinstance(p.expr1[0], float) and isinstance(p.expr0, float):
                 return p.expr0 - p.expr1[0]
+            else:
+                return None
+        elif isinstance(p.expr0, datetime.timedelta):
+            if isinstance(p.expr1, datetime.timedelta):
+                return p.expr0 - p.expr1
+            elif isinstance(p.expr1, datetime.datetime):
+                if type(p.expr1) is datetime.datetime:
+                    return p.expr1 - p.expr0
+                else:
+                    return (datetime.datetime.combine(p.expr1, datetime.time(hour=0, minute=0)) - p.expr0).date()
+            elif isinstance(p.expr1, datetime.time):
+                return (datetime.datetime.combine(datetime.date(year=1, month=1, day=1), p.expr1) - p.expr0).time()
+            else:
+                return None
+        elif isinstance(p.expr1, datetime.timedelta):
+            if isinstance(p.expr0, datetime.datetime):
+                if type(p.expr0) is datetime.datetime:
+                    return p.expr0 - p.expr1
+                else:
+                    return (datetime.datetime.combine(p.expr0, datetime.time(hour=0, minute=0)) - p.expr1).date()
+            elif isinstance(p.expr0, datetime.time):
+                return (datetime.datetime.combine(datetime.date(year=1, month=1, day=1), p.expr0) - p.expr1).time()
             else:
                 return None
         else:
@@ -400,6 +470,10 @@ class SFeelParser(Parser):
         else:
             return p.expr0 != p.expr1
 
+    @_('LBRACKET RBRACKET')
+    def expr(self, p):
+        return []
+        
     @_('LBRACKET expr RBRACKET')
     def listFilter(self, p):
         return p.expr
@@ -458,7 +532,7 @@ class SFeelParser(Parser):
 
     @_('LBRACKET ITEM EQUALS expr RBRACKET')
     def listFilter(self, p):
-        return (p.ITEM, p.EQUALS, p.expr)
+        return (p.EQUALS, p.expr)
 
     @_('LBRACKET EQUALS expr RBRACKET')
     def listFilter(self, p):
@@ -478,69 +552,76 @@ class SFeelParser(Parser):
 
     @_('expr listFilter')
     def expr(self, p):
+        ''' select items from a list '''
         if isinstance(p.expr, list):
-            if isinstance(p.listFilter, float):
+            if isinstance(p.listFilter, float):     # a specific element from the list [...][n]
                 if len(p.expr) < int(p.listFilter):
                     return None
                 if int(p.listFilter) < 1:
                     return None
                 return p.expr[int(p.listFilter) - 1]
             if isinstance(p.listFilter, tuple):
-                if len(p.listFilter) == 2:
-                    if (not isinstance(p.expr[0], str)) and (not isinstance(p.expr[0], float)):
-                        return None
+                if len(p.listFilter) == 2:          # specific items from a list of numbers or strings
                     (equality, value) = p.listFilter
                     retList = []
                     for i in range(len(p.expr)):
+                        if (not isinstance(p.expr[i], str)) and (not isinstance(p.expr[i], float)):
+                            continue
+                        item = p.expr[i]
+                        if item is None:
+                            continue
                         if equality == '>=':
-                            if p.expr[i] >= value:
-                                retList.append(value)
+                            if item >= value:
+                                retList.append(item)
                         elif equality == '>':
-                            if p.expr[i] > value:
-                                retList.append(value)
+                            if item > value:
+                                retList.append(item)
                         elif equality == '<=':
-                            if p.expr[i] <= value:
-                                retList.append(value)
+                            if item <= value:
+                                retList.append(item)
                         elif equality == '<':
-                            if p.expr[i] < value:
-                                retList.append(value)
+                            if item < value:
+                                retList.append(item)
                         elif equality == '=':
-                            if p.expr[i] == value:
-                                retList.append(value)
+                            if item == value:
+                                retList.append(item)
                         elif equality == '!=':
-                            if p.expr[i] != value:
-                                retList.append(value)
+                            if item != value:
+                                retList.append(item)
                         else:
                             return None
-                    return retList
-                elif len(p.listFilter) == 3:
-                    if not isinstance(p.expr[0], dict):
-                        return None
+                    return [retList]
+                elif len(p.listFilter) == 3:    # specific things from a list of contexts
                     (key, equality, value) = p.listFilter
                     retList = []
                     for i in range(len(p.expr)):
+                        if not isinstance(p.expr[i], dict):
+                            continue
                         if key in p.expr[i]:
+                            item = p.expr[i][key]
+                            if item is None:
+                                continue
                             if equality == '>=':
-                                if p.expr[i][key] >= value:
+                                if item >= value:
                                     retList.append(p.expr[i])
                             elif equality == '>':
-                                if p.expr[i][key] > value:
+                                if item > value:
                                     retList.append(p.expr[i])
                             elif equality == '<=':
-                                if p.expr[i][key] <= value:
+                                if item <= value:
                                     retList.append(p.expr[i])
                             elif equality == '<':
-                                if p.expr[i][key] < value:
+                                if item < value:
                                     retList.append(p.expr[i])
                             elif equality == '=':
-                                if p.expr[i][key] == value:
+                                if item == value:
                                     retList.append(p.expr[i])
                             elif equality == '!=':
-                                if p.expr[i][key] != value:
+                                if item != value:
                                     retList.append(p.expr[i])
                             else:
                                 return None
-                    return retList
+                    return [retList]
                 else:
                     return None
             return None
@@ -552,12 +633,13 @@ class SFeelParser(Parser):
 
     @_('expr listSelect')
     def expr(self, p):
+        ''' select value(s) for name p.listSelect from a list of contexts '''
         key = p.listSelect
         if isinstance(p.expr, list):
-            if not isinstance(p.expr[0], dict):
-                return None
             retList = []
             for i in range(len(p.expr)):
+                if not isinstance(p.expr[i], dict):
+                    continue
                 if key in p.expr[i]:
                     retList.append(p.expr[i][key])
             return retList
@@ -660,16 +742,16 @@ class SFeelParser(Parser):
         if isinstance(p.expr, bool):
             if isinstance(p.andExpr, bool):
                 return p.expr and p.andExpr  # True/True, True/False, False/True, False/False
-            elif p.expr:       # True/Otherwise
-                return None
-            else:               # False/Otherwise
-                return False
+            elif not p.expr:
+                return False    # False/Otherwise
+            else:
+                return None     # True/Otherwise
+        elif isinstance(p.andExpr, bool):
+            if not p.andExpr:
+                return False    # Otherwise/False
+            else:
+                return None     # Otherwise/True
         else:
-            if isinstance(p.andExpr, bool):
-                if p.andExpr:     # Otherwise/True
-                    return None
-                else:           # Otherwise/False
-                    return False
             return None         # Otherwise/Otherwise
 
     @_('expr OR expr')
@@ -698,22 +780,21 @@ class SFeelParser(Parser):
 
     @_('LBRACKET expr')
     def listStart(self, p):
-        if isinstance(p.expr, list):
-            return p.expr
-        else:
-            return [p.expr]
+        return [p.expr]
 
     @_('COMMA expr')
     def listPart(self, p):
-        if isinstance(p.expr, list):
-            return p.expr
-        else:
-            return [p.expr]
+        return [p.expr]
 
     @_('listPart COMMA expr')
     def listPart(self, p):
         if isinstance(p.expr, list):
-            return p.listPart + p.expr
+            if (len(p.expr) > 0):
+                retval = p.listPart
+                retval.append(p.expr)
+                return retval
+            else:
+                 return p.listPart + p.expr
         else:
             return p.listPart + [p.expr]
 
@@ -772,17 +853,27 @@ class SFeelParser(Parser):
 
     @_('listStart listPart RBRACKET')
     def expr(self, p):
-        return p.listStart + p.listPart
+        if p.listStart is None:
+            if p.listPart is None:
+                return []
+            else:
+                return p.listPart
+        elif p.listPart is None:
+            return p.listStart
+        if isinstance(p.listPart, list):
+            return p.listStart + p.listPart
+        return p.listStart + [p.listPart]
 
     @_('DATEFUNC expr RPAREN')
     def expr(self, p):
         ''' Convert datetime.date/datetime.time/str into datetime.date '''
-        if isinstance(p.expr, datetime.date):
-            return p.expr
-        elif isinstance(p.expr, datetime.time):
+        if isinstance(p.expr, datetime.time):
             return datetime.date(year=0, month=0, day=0)
         elif isinstance(p.expr, datetime.datetime):
-            return p.expr.date()
+            if type(p.expr) is datetime.datetime:
+                return p.expr.date()
+            else:
+                return p.expr
         elif isinstance(p.expr, str):
             try:
                 return dateutil.parser.parse(p.expr).date()
@@ -828,12 +919,13 @@ class SFeelParser(Parser):
     @_('TIMEFUNC expr RPAREN')
     def expr(self, p):
         ''' Convert datetime.date/datetime.time/str into datetime.time '''
-        if isinstance(p.expr, datetime.date):
-            return datetime.time(hour=0, minute=0, second=0)
-        elif isinstance(p.expr, datetime.time):
+        if isinstance(p.expr, datetime.time):
             return p.expr
         elif isinstance(p.expr, datetime.datetime):
-            return p.expr.time()
+            if type(p.expr) is datetime.datetime:
+                return p.expr.time()
+            else:
+                return datetime.time(hour=0, minute=0, second=0)
         elif isinstance(p.expr, str):
             return dateutil.parser.parse(p.expr).time()
         else:
@@ -842,12 +934,13 @@ class SFeelParser(Parser):
     @_('DATETIMEFUNC expr RPAREN')
     def expr(self, p):
         ''' Convert datetime.date/datetime.time/str into datetime.datetime '''
-        if isinstance(p.expr, datetime.date):
-            return datetime.combine(p.expr, datetime.time(hour=0, minute=0, second=0))
-        elif isinstance(p.expr, datetime.time):
-            return datetime.combine(datetime.date(year=0, month=0, day=0), p.expr)
+        if isinstance(p.expr, datetime.time):
+            return datetime.datetime.combine(datetime.date(year=0, month=0, day=0), p.expr)
         elif isinstance(p.expr, datetime.datetime):
-            return p.expr
+            if type(p.expr) is datetime.datetime:
+                return p.expr
+            else:
+                return datetime.datetime.combine(p.expr, datetime.time(hour=0, minute=0, second=0))
         elif isinstance(p.expr, str):
             return dateutil.parser.parse(p.expr)
         else:
@@ -856,9 +949,9 @@ class SFeelParser(Parser):
     @_('DATEANDTIMEFUNC expr COMMA expr RPAREN')
     def expr(self, p):
         ''' Convert date, time into datetime.datetime '''
-        if isinstance(p.expr0, datetime.date):
+        if type(p.expr0) is datetime.date:
             if isinstance(p.expr1, datetime.time):
-                return datetime.combine(p.expr0, p.expr1)
+                return datetime.datetime.combine(p.expr0, p.expr1)
         return None
 
     @_('DATEANDTIMEFUNC expr RPAREN')
@@ -874,10 +967,18 @@ class SFeelParser(Parser):
         number = p.expr0
         grouping = p.expr1
         decimal = p.expr2
-        if (grouping is not None) and (grouping not in [' ', ',', '.']):
+        if not isinstance(number, str):
             return None
-        if (decimal is not None) and (decimal not in ['.', ',']):
-            return None
+        if grouping is not None:
+            if not isinstance(grouping, str):
+                return None
+            if grouping not in [' ', ',', '.']:
+                return None
+        if decimal is not None:
+            if not isinstance(decimal, str):
+                return None
+            if decimal not in ['.', ',']:
+                return None
         if (grouping is not None) and (decimal is not None) and (grouping == decimal):
             return None
         if grouping is not None:
@@ -1186,43 +1287,36 @@ class SFeelParser(Parser):
         ''' substring from a string'''
         if not isinstance(p.expr0, str):
             return None
-        if not isinstance(p.expr1, float):
+        if not isinstance(p.expr1, float) or (int(p.expr1) != p.expr1):
             return None
-        if not isinstance(p.expr2, float):
+        if not isinstance(p.expr2, float) or (int(p.expr2) != p.expr2) or (p.expr2 < 0):
             return None
-        start = int(p.expr1) - 1
+        start = int(p.expr1)
         length = int(p.expr2)
-        if start > 0:
-            if start + length < len(p.expr0):
-                return p.expr0[start:start + length]
-            elif start + length == len(p.expr0):
-                return p.expr0[start:]
-            else:
-                return None
+        if start == 0:
+           return None
+        elif start > 0:
+            return p.expr0[start - 1:start - 1 + length]
         else:
-            if abs(start) > len(p.expr0):
-                return None
-            if abs(start) < length:
-                return None
-            if start + length > 0:
-                return p.expr0[start:start + length]
-            elif start + length == 0:
+            if abs(start) <= length:
                 return p.expr0[start:]
-            else:
-                return None
-
+            return p.expr0[start:start + length]
+ 
     @_('SUBSTRINGFUNC expr COMMA expr RPAREN')
     def expr(self, p):
         ''' substring from a string'''
         if not isinstance(p.expr0, str):
             return None
-        if not isinstance(p.expr1, float):
+        if not isinstance(p.expr1, float) or (int(p.expr1) != p.expr1):
             return None
-        start = int(p.expr1) - 1
-        if abs(start) < len(p.expr0):
-            return p.expr0[start:]
+        start = int(p.expr1)
+        if start == 0:
+            return None
+        elif start > 0:
+            return p.expr0[start - 1:]
         else:
-            return None
+            return p.expr0[start:]
+
 
     @_('STRINGLENFUNC expr RPAREN')
     def expr(self, p):
@@ -1254,7 +1348,7 @@ class SFeelParser(Parser):
             return None
         subAt = p.expr0.find(p.expr1)
         if subAt == -1:
-            return None
+            return ''
         return p.expr0[:subAt] 
 
     @_('SUBSTRINGAFTERFUNC expr COMMA expr RPAREN')
@@ -1266,7 +1360,7 @@ class SFeelParser(Parser):
             return None
         subAt = p.expr0.find(p.expr1)
         if subAt == -1:
-            return None
+            return ''
         return p.expr0[subAt + len(p.expr1):]
 
     @_('REPLACEFUNC expr COMMA expr COMMA expr COMMA expr RPAREN')
@@ -1289,7 +1383,9 @@ class SFeelParser(Parser):
             reFlags += re.I
         if 'x' in p.expr3:
             reFlags += re.X
-        return re.sub(p.expr1, p.expr2, p.expr0, flags=reFlags)
+        replace = p.expr2
+        replace = re.sub(pattern=r'\$(\d+)', repl=r'\\\1', string=replace)    # Convert SFEEL regular expressions to Python
+        return re.sub(pattern=p.expr1, repl=replace, string=p.expr0, flags=reFlags)
 
     @_('REPLACEFUNC expr COMMA expr COMMA expr RPAREN')
     def expr(self, p):
@@ -1301,7 +1397,9 @@ class SFeelParser(Parser):
         if not isinstance(p.expr2, str):
             return None
         reFlags = 0
-        return re.sub(p.expr1, p.expr2, p.expr0, flags=reFlags)
+        replace = p.expr2
+        replace = re.sub(pattern=r'\$(\d+)', repl=r'\\\1', string=replace)    # Convert SFEEL regular expressions to Python
+        return re.sub(pattern=p.expr1, repl=replace, string=p.expr0, flags=reFlags)
 
     @_('CONTAINSFUNC expr COMMA expr RPAREN')
     def expr(self, p):
@@ -1387,7 +1485,7 @@ class SFeelParser(Parser):
         ''' count of list items'''
         if not isinstance(p.expr, list):
             return None
-        return float(len(p.expr0))
+        return float(len(p.expr))
 
     def minFunc(self, thisList):
         minValue = None
@@ -1449,6 +1547,8 @@ class SFeelParser(Parser):
 
     def sumFunc(self, thisList):
         sumValue = 0.0
+        if len(thisList) == 0:
+            return None
         for i in range(len(thisList)):
             if not isinstance(thisList[i], float):
                 return None
@@ -1474,6 +1574,8 @@ class SFeelParser(Parser):
         return self.sumFunc(thisList)
 
     def mean(self, thisList):
+        if len(thisList) == 0:
+            return None
         try:
             return statistics.fmean(thisList)
         except:
@@ -1502,7 +1604,10 @@ class SFeelParser(Parser):
             return True
         for i in range(len(thisList)):
             if not isinstance(thisList[i], bool):
-                return None
+                if thisList[i] is None:
+                    return False
+                else:
+                    return None
             if not thisList[i]:
                 return False
         return True
@@ -1525,22 +1630,17 @@ class SFeelParser(Parser):
         thisList = p.allStart
         return self.allFunc(thisList)
 
-    def allFunc(self, thisList):
-        if len(thisList) == 0:
-            return False
-        for i in range(len(thisList)):
-            if not isinstance(thisList[i], bool):
-                return None
-            if thisList[i]:
-                return True
-        return False
-
     def anyFunc(self, thisList):
         if len(thisList) == 0:
             return False
         for i in range(len(thisList)):
-            if isinstance(thisList[i], bool) and thisList[i]:
-                return True
+            if isinstance(thisList[i], bool):
+                if thisList[i]:
+                    return True
+            elif thisList[i] is None:
+                continue
+            else:
+                return None
         return False
 
     @_('ANYFUNC expr')
@@ -1572,7 +1672,7 @@ class SFeelParser(Parser):
             return None
         start = int(p.expr1) - 1
         length = int(p.expr2)
-        if start > 0:
+        if start >= 0:
             if start + length < len(p.expr0):
                 return p.expr0[start:start + length]
             elif start + length == len(p.expr0):
@@ -1630,7 +1730,10 @@ class SFeelParser(Parser):
 
     @_('concatenateStart listPart RPAREN')
     def expr(self, p):
-        return p.concatenateStart + p.listPart
+        retval = p.concatenateStart
+        for i in range(len(p.listPart)):
+            retval += p.listPart[i]
+        return retval
 
     @_('concatenateStart RPAREN')
     def expr(self, p):
@@ -1707,8 +1810,15 @@ class SFeelParser(Parser):
 
     @_('unionStart listPart RPAREN')
     def expr(self, p):
-        thisList = p.unionStart + p.listPart
-        return self.unionFunc(thisList)
+        retval = []
+        for i in range(len(p.unionStart)):
+            if p.unionStart[i] not in retval:
+                retval.append(p.unionStart[i])
+        for i in range(len(p.listPart)):
+            for j in range(len(p.listPart[i])):
+                if p.listPart[i][j] not in retval:
+                    retval.append(p.listPart[i][j])
+        return retval
 
     @_('unionStart RPAREN')
     def expr(self, p):
@@ -1730,7 +1840,7 @@ class SFeelParser(Parser):
         newList = []
         for i in range(len(this)):
             if isinstance(this[i], list):
-                newList += flatten(this[i])
+                newList += self.flatten(this[i])
             else:
                 newList.append(this[i])
         return newList
@@ -1743,17 +1853,31 @@ class SFeelParser(Parser):
         newList = self.flatten(p.expr)
         return newList
 
-    @_('PRODUCTFUNC expr RPAREN')
-    def expr(self, p):
-        ''' product number in a list '''
-        if not isinstance(p.expr, list):
-            return None
+    def product(self, thisList):
         product = 1.0
-        for i in range(len(p.expr)):
-            if not isinstance(p.expr[i], float):
+        for i in range(len(thisList)):
+            if not isinstance(thisList[i], float):
                 return None
-            product *= p.expr[i]
+            product *= thisList[i]
         return product
+
+    @_('PRODUCTFUNC expr')
+    def productStart(self, p):
+        ''' product number in a list '''
+        if isinstance(p.expr, list):
+            return p.expr
+        else:
+            return [p.expr]
+
+    @_('productStart listPart RPAREN')
+    def expr(self, p):
+        thisList = p.productStart + p.listPart
+        return self.product(thisList)
+
+    @_('productStart RPAREN')
+    def expr(self, p):
+        thisList = p.productStart
+        return self.product(thisList)
 
     def median(self, thisList):
         try:
@@ -1805,9 +1929,13 @@ class SFeelParser(Parser):
 
     def mode(self, thisList):
         try:
-            return statistics.multimode(thisList)
+            thisMode = statistics.multimode(thisList)
         except:
             return None
+        if isinstance(thisMode, list):
+            return sorted(thisMode)
+        else:
+            return thisMode
 
     @_('MODEFUNC expr')
     def modeStart(self, p):
@@ -1834,7 +1962,9 @@ class SFeelParser(Parser):
             return None
         if not isinstance(p.expr1, float):
             return None
-        return float(int(p.expr0 * 10**p.expr1 + 0.5))/(10**p.expr1)
+        if int(p.expr1) != p.expr1:
+            return None
+        return round(p.expr0, int(p.expr1))
 
     @_('FLOORFUNC expr RPAREN')
     def expr(self, p):
@@ -1864,7 +1994,7 @@ class SFeelParser(Parser):
             return None
         if not isinstance(p.expr1, float):
             return None
-        return float(int(p.expr0) % int(p.expr1))
+        return float(p.expr0 % p.expr1)
 
     @_('SQRTFUNC expr RPAREN')
     def expr(self, p):
@@ -2257,9 +2387,12 @@ if __name__ == '__main__':
         except EOFError:
             break
 
+        if text == 'quit()':
+            break
 
         (status, retVal) = parser.sFeelParse(text)
 
+        print(text)
         print(retVal)
         if 'errors' in status:
             print('With errors:', status['errors'])
