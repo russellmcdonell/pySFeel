@@ -24,7 +24,7 @@ class SFeelLexer(Lexer):
               LOGFUNC, EXPFUNC, ODDFUNC, EVENFUNC,
               VALUETFUNC, VALUEDTFUNC, VALUEDT1FUNC, VALUEDTDFUNC, VALUEDTD1FUNC,
               VALUEYMDFUNC, VALUEYMD1FUNC,
-              DURATIONFUNC, YEARSANDMONTHSDURATIONFUNC, GETVALUEFUNC, GETENTRIESFUNC,
+              DURATIONFUNC, YEARSANDMONTHSDURATIONFUNC, WEEKOFYEARFUNC, TODAYFUNC, GETVALUEFUNC, GETENTRIESFUNC,
               NAME, STRING, NULL,
               LBRACKET, RBRACKET,
               EQUALS, NOTEQUALS, LTTHANEQUAL, GTTHANEQUAL, LTTHAN, GTTHAN,
@@ -101,6 +101,8 @@ class SFeelLexer(Lexer):
     VALUEYMD1FUNC = r'valueymd-1\('
     DURATIONFUNC = r'duration\('
     YEARSANDMONTHSDURATIONFUNC = r'years and months duration\('
+    WEEKOFYEARFUNC = r'week of year\('
+    TODAYFUNC = r'today\('
     GETVALUEFUNC = r'get\s+value\('
     GETENTRIESFUNC = r'get\s+entries\('
     DTDURATION = r'-?P((([0-9]+D)(T(([0-9]+H)([0-9]+M)?([0-9]+(\.[0-9]+)?S)?|([0-9]+M)([0-9]+(\.[0-9]+)?S)?|([0-9]+(\.[0-9]+)?S)))?)|(T(([0-9]+H)([0-9]+M)?([0-9]+(\.[0-9]+)?S)?|([0-9]+M)([0-9]+(\.[0-9]+)?S)?|([0-9]+(\.[0-9]+)?S))))'
@@ -2190,6 +2192,17 @@ class SFeelParser(Parser):
                 months += 1
         return float(months)
 
+    @_('WEEKOFYEARFUNC expr RPAREN')
+    def expr(self, p):
+        ''' Return week of year from provided date as int '''
+        if not isinstance(p.expr, datetime.date):
+            return None
+        return p.expr.isocalendar()[1]
+
+    @_('TODAYFUNC RPAREN')
+    def expr(self, p):
+        ''' Return today's date '''
+        return datetime.date.today()
 
     @_('GETVALUEFUNC expr COMMA NAME RPAREN')
     def expr(self, p):
