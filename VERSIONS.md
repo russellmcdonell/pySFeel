@@ -1,5 +1,9 @@
-### 1.1.10 - the first release
-### 1.1.11 - This is a bug fix release.
+### 1.2.0 - First candidate for a production release
+* fixed addition and subtraction of durations
+* removed addition of Contexts [not defined in DMN and non-commutative, result depended upon order of Contexts]
+* fixed an issue with slicing
+* this complete the development of pySFeel for DMN 1.2
+### 0.1.11 - This is a bug fix release.
 * fixed 'false and otherwise' - now returns False
 * fixed 'otherwise and false' - now return False
 * fixed 'in' a list of ranges
@@ -22,11 +26,5 @@
 * added date/time addition and subtraction
 * fixed number() function where 'number' is null - thank you Gabriel Galibourg ([g6g8](https://github.com/g6g8))
 * added lots of pytest tests
-
-
-
-
-
-
-
+### 0.1.10 - the first release
 

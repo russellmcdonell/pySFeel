@@ -211,15 +211,7 @@ class SFeelParser(Parser):
 
     @_('expr')
     def statement(self, p):
-        if p.expr is None:
-            return None
-        elif isinstance(p.expr, list):
-            if len(p.expr) == 1:
-                return p.expr[0]
-            else:
-                return p.expr
-        else:
-            return p.expr
+        return p.expr
 
     @_(NULL)
     def expr(self, p):
@@ -227,7 +219,9 @@ class SFeelParser(Parser):
 
     @_('expr IN expr')
     def expr(self, p):
-        if isinstance(p.expr1, tuple):
+        # This is 'in' as in 'in a list' or 'in a range' or simply 'in' as an alternative to '='
+        # Grammer Rule 49.c
+        if isinstance(p.expr1, tuple):      # in a range
             (end0, lowVal, highVal, end1) = p.expr1
             if isinstance(p.expr0, str):
                 if not isinstance(lowVal, str) or not isinstance(highVal, str):
@@ -237,6 +231,9 @@ class SFeelParser(Parser):
                     return False
             elif isinstance(p.expr0, datetime.date):
                 if not isinstance(lowVal, datetime.date) or not isinstance(highVal, datetime.date):
+                    return False
+            elif isinstance(p.expr0, datetime.timedelta):
+                if not isinstance(lowVal, datetime.timedelta) or not isinstance(highVal, datetime.timedelta):
                     return False
             else:
                 return False
@@ -249,7 +246,7 @@ class SFeelParser(Parser):
             if (end1 != ']') and (highVal == p.expr0):
                 return False
             return True
-        elif isinstance(p.expr1, list):
+        elif isinstance(p.expr1, list):     # in a list
             for i in range(len(p.expr1)):
                 if isinstance(p.expr1[i], tuple):
                     (end0, lowVal, highVal, end1) = p.expr1[i]
@@ -261,6 +258,9 @@ class SFeelParser(Parser):
                             continue
                     elif isinstance(p.expr0, datetime.date):
                         if not isinstance(lowVal, datetime.date) or not isinstance(highVal, datetime.date):
+                            continue
+                    elif isinstance(p.expr0, datetime.timedelta):
+                        if not isinstance(lowVal, datetime.timedelta) or not isinstance(highVal, datetime.timedelta):
                             continue
                     else:
                         return False
@@ -276,6 +276,75 @@ class SFeelParser(Parser):
                 elif p.expr0 == p.expr1[i]:
                     return True
             return False
+        elif isinstance(p.expr0, str) and isinstance(p.expr1, str):
+             return p.expr0 == p.expr1
+        elif isinstance(p.expr0, float) and isinstance(p.expr1, float):
+            return p.expr0 == p.expr1
+        elif isinstance(p.expr0, datetime.date) and isinstance(p.expr1, datetime.date):
+            return p.expr0 == p.expr1
+        elif isinstance(p.expr0, datetime.timedelta) and isinstance(p.expr1, datetime.timedelta):
+            return p.expr0 == p.expr1
+        else:
+            return None
+
+
+    @_('expr IN LTTHAN expr')
+    def expr(self, p):
+        # 'in <' as an alternative to '<'
+        # Grammer Rule 49.c
+        if isinstance(p.expr0, str) and isinstance(p.expr1, str):
+            return p.expr0 < p.expr1
+        elif isinstance(p.expr0, float) and isinstance(p.expr1, float):
+            return p.expr0 < p.expr1
+        elif isinstance(p.expr0, datetime.date) and isinstance(p.expr1, datetime.date):
+            return p.expr0 < p.expr1
+        elif isinstance(p.expr0, datetime.timedelta) and isinstance(p.expr1, datetime.timedelta):
+            return p.expr0 < p.expr1
+        else:
+            return None
+
+    @_('expr IN GTTHAN expr')
+    def expr(self, p):
+        # 'in >' as an alternative to >'
+        # Grammer Rule 49.c
+        if isinstance(p.expr0, str) and isinstance(p.expr1, str):
+            return p.expr0 > p.expr1
+        elif isinstance(p.expr0, float) and isinstance(p.expr1, float):
+            return p.expr0 > p.expr1
+        elif isinstance(p.expr0, datetime.date) and isinstance(p.expr1, datetime.date):
+            return p.expr0 > p.expr1
+        elif isinstance(p.expr0, datetime.timedelta) and isinstance(p.expr1, datetime.timedelta):
+            return p.expr0 > p.expr1
+        else:
+            return None
+
+    @_('expr IN LTTHANEQUAL expr')
+    def expr(self, p):
+        # 'in <=' as an alternative to <=
+        # Grammer Rule 49.c
+        if isinstance(p.expr0, str) and isinstance(p.expr1, str):
+            return p.expr0 <= p.expr1
+        elif isinstance(p.expr0, float) and isinstance(p.expr1, float):
+            return p.expr0 <= p.expr1
+        elif isinstance(p.expr0, datetime.date) and isinstance(p.expr1, datetime.date):
+            return p.expr0 <= p.expr1
+        elif isinstance(p.expr0, datetime.timedelta) and isinstance(p.expr1, datetime.timedelta):
+            return p.expr0 <= p.expr1
+        else:
+            return None
+
+    @_('expr IN GTTHANEQUAL expr')
+    def expr(self, p):
+        # 'in >=' as an alternative to >=
+        # Grammer Rule 49.c
+        if isinstance(p.expr0, str) and isinstance(p.expr1, str):
+            return p.expr0 >= p.expr1
+        elif isinstance(p.expr0, float) and isinstance(p.expr1, float):
+            return p.expr0 >= p.expr1
+        elif isinstance(p.expr0, datetime.date) and isinstance(p.expr1, datetime.date):
+            return p.expr0 >= p.expr1
+        elif isinstance(p.expr0, datetime.timedelta) and isinstance(p.expr1, datetime.timedelta):
+            return p.expr0 >= p.expr1
         else:
             return None
 
@@ -285,166 +354,219 @@ class SFeelParser(Parser):
 
     @_('expr PLUS expr')
     def expr(self, p):
-        if isinstance(p.expr0, dict) and isinstance(p.expr1, dict):
-            return {**p.expr0, **p.expr1}
-        elif isinstance(p.expr0, float) and isinstance(p.expr1, float):
-            return p.expr0 + p.expr1
-        elif isinstance(p.expr0, str) and isinstance(p.expr1, str):
-            return p.expr0 + p.expr1
-        elif isinstance(p.expr0, list) and isinstance(p.expr1, list):
-            return p.expr0 + p.expr1
-        elif (isinstance(p.expr0, list) and (len(p.expr0) == 1)):
-            if isinstance(p.expr0[0], str) and isinstance(p.expr1, str):
-                return p.expr0[0] + p.expr1
-            elif isinstance(p.expr0[0], float) and isinstance(p.expr1, float):
-                return p.expr0[0] + p.expr1
-            else:
-                return None
-        elif (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
-            if isinstance(p.expr1[0], str) and isinstance(p.expr0, str):
-                return p.expr0 + p.expr1[0]
-            elif isinstance(p.expr1[0], float) and isinstance(p.expr0, float):
-                return p.expr0 + p.expr1[0]
-            else:
-                return None
-        elif isinstance(p.expr0, datetime.timedelta):
-            if isinstance(p.expr1, datetime.timedelta):
-                return p.expr0 + p.expr1
-            elif isinstance(p.expr1, datetime.datetime):
-                if type(p.expr1) is datetime.datetime:
-                    return p.expr0 + p.expr1
-                else:
-                    return (datetime.datetime.combine(p.expr1, datetime.time(hour=0, minute=0)) + p.expr0).date()
-            elif isinstance(p.expr1, datetime.time):
-                return (datetime.datetime.combine(datetime.date(year=1, month=1, day=1), p.expr1) + p.expr0).time()
-            else:
-                return None
-        elif isinstance(p.expr1, datetime.timedelta):
-            if isinstance(p.expr0, datetime.datetime):
-                if type(p.expr0) is datetime.datetime:
-                    return p.expr0 + p.expr1
-                else:
-                    return (datetime.datetime.combine(p.expr0, datetime.time(hour=0, minute=0)) + p.expr1).date()
-            elif isinstance(p.expr0, datetime.time):
-                return (datetime.datetime.combine(datetime.date(year=1, month=1, day=1), p.expr0) + p.expr1).time()
-            else:
-                return None
+        '''
+        Add two expressions
+        For convenience of notation, a singleton list L,
+        when used in an expression where a list is not expected, behaves as if L[1] is written.
+        '''
+        if isinstance(p.expr0, list) and (len(p.expr0) == 1):
+            var0 = p.expr0[0]
         else:
-            return None
+            var0 = p.expr0
+        if isinstance(p.expr1, list) and (len(p.expr1) == 1):
+            var1 = p.expr1[0]
+        else:
+            var1 = p.expr1
+        if isinstance(var0, list) and isinstance(var1, list):       # Concatentation of two lists
+            return var0 + var1
+        if isinstance(var0, list):                                  # Append to a list
+            return var0 + list(var1)
+        if isinstance(var1, list):                                  # Prepend to a list
+            return list(var0) + var1
+        if isinstance(var0, float) and isinstance(var1, float):     # Include addition of two durations(yearMonth)
+            return var0 + var1
+        if isinstance(var0, str) and isinstance(var1, str):         # Concatenation of strings
+            return var0 + var1
+        if isinstance(var0, datetime.datetime):             # date or datetime
+            if isinstance(var1, datetime.timedelta):            # date or datetime plus days and time duration
+                return var0 + var1
+            elif isinstance(var1, float):                       # date or datetime plus years and months duration
+                year = (var0).year
+                month = (var0).month + var1
+                while month < 1:                                # Allow for addition of a negative duration
+                    year -= 1
+                    month += 12
+                while month > 12:                               # Bring month into range 1-12
+                    year += 1
+                    month -= 12
+                return (var0).replace(year=int(year), month=int(month))
+            else:
+                return None
+        if isinstance(var1, datetime.datetime):        # date or datetime
+            if isinstance(var0, datetime.timedelta):         # days and time duration plus date or datetime
+                return var0 + var1
+            elif isinstance(var0, float):                    # years and months duration plus date or datetime
+                year = (var1).year
+                month = (var1).month + var0
+                while month < 1:                            # Allow for the addtions of a negative duration
+                    year -= 1
+                    month += 12
+                while month > 12:                           # Bring month into range 1-12
+                    year += 1
+                    month -= 12
+                return (var1).replace(year=int(year), month=int(month))
+            else:
+                return None
+        if isinstance(var0, datetime.time) and isinstance(var1, datetime.timedelta):        # date or datetime plus days and time duration
+            return (datetime.datetime.combine(datetime.date.today(), var0) + var1).time()
+        if isinstance(var1, datetime.time) and isinstance(var0, datetime.timedelta):        # days and time duration plus date or datetime
+            return (datetime.datetime.combine(datetime.date.today(), var1) + var0).time()
+        if isinstance(var0, datetime.timedelta) and isinstance(var1, datetime.timedelta):   # days and time duration plus days and time duration
+            return var0 + var1
+        return None
 
     @_('expr MINUS expr')
     def expr(self, p):
-        if isinstance(p.expr0, float) and isinstance(p.expr1, float):
-            return p.expr0 - p.expr1
-        elif (isinstance(p.expr0, list) and (len(p.expr0) == 1)):
-            if isinstance(p.expr0[0], float) and isinstance(p.expr1, float):
-                return p.expr0[0] - p.expr1
+        '''
+        Subtract two expressions
+        For convenience of notation, a singleton list L,
+        when used in an expression where a list is not expected, behaves as if L[1] is written.
+        '''
+        if isinstance(p.expr0, list) and (len(p.expr0) == 1):
+            var0 = p.expr0[0]
+        else:
+            var0 = p.expr0
+        if isinstance(p.expr1, list) and (len(p.expr1) == 1):
+            var1 = p.expr1[0]
+        else:
+            var1 = p.expr1
+        if isinstance(var0, float) and isinstance(var1, float):     # Include subtraction of two durations(yearMonth)
+            return var0 - var1
+        if isinstance(var0, datetime.datetime):             # date/datetime minus date/datetime or duration
+            if isinstance(var1, datetime.datetime):             # date/time minus date/time
+                return var0 - var1
+            if isinstance(var1, datetime.timedelta):         # date/datetime minus days and time duration
+                return var0 - var1
+            if isinstance(var1, float):                    # date/datetime minus years and months duration
+                year = (var0).year
+                month = (var0).month - p.expr1
+                while month > 12:
+                    year += 1
+                    month -= 12
+                while month < 1:
+                    year -= 1
+                    month += 12
+                return (var0).replace(year=int(year), month=int(month))
             else:
                 return None
-        elif (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
-            if isinstance(p.expr1[0], float) and isinstance(p.expr0, float):
-                return p.expr0 - p.expr1[0]
+        elif isinstance(var0, datetime.time):            # time minus time or days and time duration
+            if isinstance(var1, datetime.time):               # time minus time
+                return datetime.datetime.combine(datetime.date.today(), var0) - datetime.datetime.combine(datetime.date.today(), var1)
+            elif isinstance(var1, datetime.timedelta):        # time minus days and time duration
+                return (datetime.datetime.combine(datetime.date.today(), var0) - var1).time()
             else:
                 return None
-        elif isinstance(p.expr0, datetime.timedelta):
-            if isinstance(p.expr1, datetime.timedelta):
-                return p.expr0 - p.expr1
-            elif isinstance(p.expr1, datetime.datetime):
-                if type(p.expr1) is datetime.datetime:
-                    return p.expr1 - p.expr0
-                else:
-                    return (datetime.datetime.combine(p.expr1, datetime.time(hour=0, minute=0)) - p.expr0).date()
-            elif isinstance(p.expr1, datetime.time):
-                return (datetime.datetime.combine(datetime.date(year=1, month=1, day=1), p.expr1) - p.expr0).time()
-            else:
-                return None
-        elif isinstance(p.expr1, datetime.timedelta):
-            if isinstance(p.expr0, datetime.datetime):
-                if type(p.expr0) is datetime.datetime:
-                    return p.expr0 - p.expr1
-                else:
-                    return (datetime.datetime.combine(p.expr0, datetime.time(hour=0, minute=0)) - p.expr1).date()
-            elif isinstance(p.expr0, datetime.time):
-                return (datetime.datetime.combine(datetime.date(year=1, month=1, day=1), p.expr0) - p.expr1).time()
-            else:
-                return None
+        elif isinstance(var0, datetime.timedelta) and isinstance(var1, datetime.timedelta):       # days and time duration minus days and time duration
+            return var0 - var1
         else:
             return None
 
     @_('expr EXPONENT expr')
     def expr(self, p):
-        if isinstance(p.expr0, float) and isinstance(p.expr1, float):
-            return p.expr0 ** p.expr1
-        elif (isinstance(p.expr0, list) and (len(p.expr0) == 1)):
-            if isinstance(p.expr0[0], float) and isinstance(p.expr1, float):
-                return p.expr0[0] ** p.expr1
-            else:
-                return None
-        elif (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
-            if isinstance(p.expr1[0], float) and isinstance(p.expr0, float):
-                return p.expr0 ** p.expr1[0]
-            else:
-                return None
+        '''
+        expression power expression
+        For convenience of notation, a singleton list L,
+        when used in an expression where a list is not expected, behaves as if L[1] is written.
+        '''
+        if isinstance(p.expr0, list) and (len(p.expr0) == 1):
+            var0 = p.expr0[0]
+        else:
+            var0 = p.expr0
+        if isinstance(p.expr1, list) and (len(p.expr1) == 1):
+            var1 = p.expr1[0]
+        else:
+            var1 = p.expr1
+        if isinstance(var0, float) and isinstance(var1, float):
+            return var0 ** var1
         else:
             return None
 
     @_('expr MULTIPY expr')
     def expr(self, p):
-        if isinstance(p.expr0, float) and isinstance(p.expr1, float):
-            return p.expr0 * p.expr1
-        elif (isinstance(p.expr0, list) and (len(p.expr0) == 1)):
-            if isinstance(p.expr0[0], float) and isinstance(p.expr1, float):
-                return p.expr0[0] * p.expr1
-            else:
-                return None
-        elif (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
-            if isinstance(p.expr1[0], float) and isinstance(p.expr0, float):
-                return p.expr0 * p.expr1[0]
-            else:
-                return None
+        '''
+        multiply two expressions
+        For convenience of notation, a singleton list L,
+        when used in an expression where a list is not expected, behaves as if L[1] is written.
+        '''
+        if isinstance(p.expr0, list) and (len(p.expr0) == 1):
+            var0 = p.expr0[0]
+        else:
+            var0 = p.expr0
+        if isinstance(p.expr1, list) and (len(p.expr1) == 1):
+            var1 = p.expr1[0]
+        else:
+            var1 = p.expr1
+        if isinstance(var0, float) and isinstance(var1, float):
+            return var0 * var1
+        elif isinstance(var0, datetime.timedelta) and isinstance(var1, float):
+            return var0 * var1
+        elif isinstance(var1, datetime.timedelta) and isinstance(var0, float):
+            return var0 * var1
         else:
             return None
 
     @_('expr DIVIDE expr')
     def expr(self, p):
-        if isinstance(p.expr0, float) and isinstance(p.expr1, float):
-            if p.expr1 == 0.0:
+        '''
+        multiply two expressions
+        For convenience of notation, a singleton list L,
+        when used in an expression where a list is not expected, behaves as if L[1] is written.
+        '''
+        if isinstance(p.expr0, list) and (len(p.expr0) == 1):
+            var0 = p.expr0[0]
+        else:
+            var0 = p.expr0
+        if isinstance(p.expr1, list) and (len(p.expr1) == 1):
+            var1 = p.expr1[0]
+        else:
+            var1 = p.expr1
+        if isinstance(p.expr1, list) and (len(p.expr1) == 1):
+            var1 = p.expr1[0]
+        else:
+            var1 = p.expr1
+        if isinstance(var0, float) and isinstance(var1, float):
+            try:
+                return var0 / var1
+            except:
+                 return None
+        elif isinstance(var0, datetime.timedelta) and isinstance(var1, float):
+            try:
+                return var0 / var1
+            except:
                 return None
-            else:
-                return p.expr0 / p.expr1
-        elif (isinstance(p.expr0, list) and (len(p.expr0) == 1)):
-            if isinstance(p.expr0[0], float) and isinstance(p.expr1, float):
-                if p.expr1 == 0.0:
-                    return None
-                return p.expr0[0] / p.expr1
-            else:
-                return None
-        elif (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
-            if isinstance(p.expr1[0], float) and isinstance(p.expr0, float):
-                if p.expr1[0] == 0.0:
-                    return None
-                return p.expr0 / p.expr1[0]
-            else:
+        elif isinstance(var0, datetime.timedelta) and isinstance(var1, datetime.timedelta):
+            try:
+                return var0 / var1
+            except:
                 return None
         else:
             return None
 
     @_('MINUS expr %prec UMINUS')
     def expr(self, p):
-        if isinstance(p.expr, float):
-            return -p.expr
-        elif (isinstance(p.expr, list) and (len(p.expr) == 1)):
-            if isinstance(p.expr[0], float):
-                return -p.expr[0]
-            else:
-                return None
-        elif isinstance(p.expr, bool):
-            return not p.expr
+        '''
+        unary minus
+        For convenience of notation, a singleton list L,
+        when used in an expression where a list is not expected, behaves as if L[1] is written.
+        '''
+        if isinstance(p.expr, list) and (len(p.expr) == 1):
+            var = p.expr[0]
+        else:
+            var = p.expr
+        if isinstance(var, float):
+            return -var
+        elif isinstance(var, bool):
+            return not var
         else:
             return None
 
     @_('expr EQUALS expr')
     def expr(self, p):
+        '''
+        expression = expression
+        For convenience of notation, a singleton list L,
+        when used in an expression where a list is not expected, behaves as if L[1] is written.
+        '''
         if (isinstance(p.expr0, list) and (len(p.expr0) == 1)):
             x0 = p.expr0[0]
         else:
@@ -460,15 +582,24 @@ class SFeelParser(Parser):
 
     @_('expr NOTEQUALS expr')
     def expr(self, p):
+        '''
+        expression != expression
+        For convenience of notation, a singleton list L,
+        when used in an expression where a list is not expected, behaves as if L[1] is written.
+        '''
         if (isinstance(p.expr0, list) and (len(p.expr0) == 1)):
-            if (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
-                return p.expr0[0] != p.expr1[0]
-            else:
-                return p.expr0[0] != p.expr1
-        elif (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
-            return p.expr0 != p.expr1[0]
+            x0 = p.expr0[0]
         else:
-            return p.expr0 != p.expr1
+            x0 = p.expr0
+        if (isinstance(p.expr1, list) and (len(p.expr1) == 1)):
+            x1 = p.expr1[0]
+        else:
+            x1 = p.expr1
+        try:
+            return x0 != x1
+        except:
+            False
+
 
     @_('LBRACKET RBRACKET')
     def expr(self, p):
@@ -590,7 +721,7 @@ class SFeelParser(Parser):
                                 retList.append(item)
                         else:
                             return None
-                    return [retList]
+                    return retList
                 elif len(p.listFilter) == 3:    # specific things from a list of contexts
                     (key, equality, value) = p.listFilter
                     retList = []
@@ -621,7 +752,7 @@ class SFeelParser(Parser):
                                     retList.append(p.expr[i])
                             else:
                                 return None
-                    return [retList]
+                    return retList
                 else:
                     return None
             return None
@@ -1032,78 +1163,89 @@ class SFeelParser(Parser):
         return not p.expr
 
     def inFunc(self, thisList):
+        # This is the 'in()' function where the parameters are a list of tests
+        # The first item in thisList is tested against each of the remaining items in thisList
+        # The in() function returns True if one of those test is True
         inValue = thisList[0]
-        if (len(thisList) == 2) and isinstance(thisList[1], tuple) and (len(thisList[1]) == 4):
-            (end0, lowVal, highVal, end1) = thisList[1]
-            if isinstance(inValue, str):
-                if not isinstance(lowVal, str) or not isinstance(highVal, str):
-                    return False
-            elif isinstance(inValue, float):
-                if not isinstance(lowVal, float) or not isinstance(highVal, float):
-                    return False
-            elif isinstance(inValue, datetime.date):
-                if not isinstance(lowVal, datetime.date) or not isinstance(highVal, datetime.date):
-                    return False
-            else:
-                return False
-            if lowVal > inValue:
-                return False
-            if highVal < inValue:
-                return False
-            if (end0 != '[') and (lowVal == inValue):
-                return False
-            if (end1 != ']') and (highVal == inValue):
-                return False
-            return True
         for i in range(1,len(thisList)):
-            if not isinstance(thisList[i], tuple):
-                return False
-            (comparitor, toValue) = thisList[i]
-            if comparitor == '=':
-                try:
-                    if(inValue == toValue):
-                        return True
-                except:
-                    return False
-            elif comparitor == '<=':
-                try:
-                    if(inValue <= toValue):
-                        return True
-                except:
-                    return False
-            elif comparitor == '<':
-                try:
-                    if(inValue < toValue):
-                        return True
-                except:
-                    return False
-            elif comparitor == '>=':
-                try:
-                    if(inValue >= toValue):
-                        return True
-                except:
-                    return False
-            elif comparitor == '>':
-                try:
-                    if(inValue > toValue):
-                        return True
-                except:
-                    return False
-            elif comparitor == '!=':
-                try:
-                    if(inValue != toValue):
-                        return True
-                except:
-                    return False
+            if isinstance(thisList[i], tuple) and (len(thisList[i]) == 4):
+                # This test is 'in a range'
+                (end0, lowVal, highVal, end1) = thisList[i]
+                if isinstance(inValue, str):
+                    if not isinstance(lowVal, str) or not isinstance(highVal, str):
+                        continue
+                elif isinstance(inValue, float):
+                    if not isinstance(lowVal, float) or not isinstance(highVal, float):
+                        continue
+                elif isinstance(inValue, datetime.date):
+                    if not isinstance(lowVal, datetime.date) or not isinstance(highVal, datetime.date):
+                        continue
+                else:
+                    continue
+                if lowVal > inValue:
+                    continue
+                if highVal < inValue:
+                    continue
+                if (end0 != '[') and (lowVal == inValue):
+                    continue
+                if (end1 != ']') and (highVal == inValue):
+                    continue
+                return True
+            else:
+                if not isinstance(thisList[i], tuple):
+                    continue
+                (comparitor, toValue) = thisList[i]
+                if comparitor == '=':
+                    try:
+                        if(inValue == toValue):
+                            return True
+                    except:
+                        pass
+                    continue
+                if comparitor == '<=':
+                    try:
+                        if(inValue <= toValue):
+                            return True
+                    except:
+                        pass
+                    continue
+                if comparitor == '<':
+                    try:
+                        if(inValue < toValue):
+                            return True
+                    except:
+                        pass
+                    continue
+                if comparitor == '>=':
+                    try:
+                        if(inValue >= toValue):
+                            return True
+                    except:
+                        pass
+                    continue
+                if comparitor == '>':
+                    try:
+                        if(inValue > toValue):
+                            return True
+                    except:
+                        pass
+                    continue
+                if comparitor == '!=':
+                    try:
+                        if(inValue != toValue):
+                            return True
+                    except:
+                        pass
+                    continue
         return False
 
     @_('expr INFUNC expr')
     def inStart(self, p):
         ''' item in list items'''
         if isinstance(p.expr1, list):
-            thisList = p.expr1
-            for i in range(len(thisList)):
-                thisList[i] = [('=', thisList[i])]
+            thisList = []
+            for i in range(len(p.expr1)):
+                thisList.append([('=', p.expr1[i])])
             return [p.expr0] + thisList
         else:
             return [p.expr0] + [('=', p.expr1)]
@@ -1112,9 +1254,9 @@ class SFeelParser(Parser):
     def inStart(self, p):
         ''' item in list items'''
         if isinstance(p.expr1, list):
-            thisList = p.expr1
-            for i in range(len(thisList)):
-                thisList[i] = [('<=', thisList[i])]
+            thisList = []
+            for i in range(len(p.expr1)):
+                thisList.append([('<=', p.expr1[i])])
             return [p.expr0] + thisList
         else:
             return [p.expr0] + [('<=', p.expr1)]
@@ -1123,9 +1265,9 @@ class SFeelParser(Parser):
     def inStart(self, p):
         ''' item in list items'''
         if isinstance(p.expr1, list):
-            thisList = p.expr1
-            for i in range(len(thisList)):
-                thisList[i] = [('<', thisList[i])]
+            thisList = []
+            for i in range(len(p.expr1)):
+                thisList.append([('<', [p.expr1][i])])
             return [p.expr0] + thisList
         else:
             return [p.expr0] + [('<', p.expr1)]
@@ -1134,9 +1276,9 @@ class SFeelParser(Parser):
     def inStart(self, p):
         ''' item in list items'''
         if isinstance(p.expr1, list):
-            thisList = p.expr1
-            for i in range(len(thisList)):
-                thisList[i] = [('>=', thisList[i])]
+            thisList = []
+            for i in range(len(p.expr1)):
+                thisList.append([('>=', p.expr1[i])])
             return [p.expr0] + thisList
         else:
             return [p.expr0] + [('>=', p.expr1)]
@@ -1145,30 +1287,20 @@ class SFeelParser(Parser):
     def inStart(self, p):
         ''' item in list items'''
         if isinstance(p.expr1, list):
-            thisList = p.expr1
-            for i in range(len(thisList)):
-                thisList[i] = [('>', thisList[i])]
+            thisList = []
+            for i in range(len(p.expr1)):
+                thisList.append([('>', p.expr1[i])])
             return [p.expr0] + thisList
         else:
             return [p.expr0] + [('>', p.expr1)]
 
-    @_('expr INFUNC NOTEQUALS expr')
-    def inStart(self, p):
-        ''' item in list items'''
-        if isinstance(p.expr1, list):
-            thisList = p.expr1
-            for i in range(len(thisList)):
-                thisList[i] = [('!=', thisList[i])]
-            return [p.expr0] + thisList
-        else:
-            return [p.expr0] + [('!=', p.expr1)]
 
     @_('COMMA LTTHANEQUAL expr')
     def inPart(self, p):
         if isinstance(p.expr, list):
-            thisList = p.expr
-            for i in range(len(thisList)):
-                thisList[i] = [('<=', thisList[i])]
+            thisList = []
+            for i in range(len(p.expr1)):
+                thisList.append([('<=', p.expr1[i])])
             return thisList
         else:
             return [('<=', p.expr)]
@@ -1176,9 +1308,9 @@ class SFeelParser(Parser):
     @_('COMMA LTTHAN expr')
     def inPart(self, p):
         if isinstance(p.expr, list):
-            thisList = p.expr
-            for i in range(len(thisList)):
-                thisList[i] = [('<', thisList[i])]
+            thisList = []
+            for i in range(len(p.expr1)):
+                thisList.append([('<', p.expr1[i])])
             return thisList
         else:
             return [('<=', p.expr)]
@@ -1186,39 +1318,39 @@ class SFeelParser(Parser):
     @_('COMMA GTTHANEQUAL expr')
     def inPart(self, p):
         if isinstance(p.expr, list):
-            thisList = p.expr
-            for i in range(len(thisList)):
-                thisList[i] = [('>=', thisList[i])]
+            thisList = []
+            for i in range(len(p.expr1)):
+                thisList.append([('>=', p.expr1[i])])
             return thisList
         else:
-            return [('<=', p.expr)]
+            return [('>=', p.expr)]
 
     @_('COMMA GTTHAN expr')
     def inPart(self, p):
         if isinstance(p.expr, list):
-            thisList = p.expr
-            for i in range(len(thisList)):
-                thisList[i] = [('>', thisList[i])]
+            thisList = []
+            for i in range(len(p.expr1)):
+                thisList.append([('>', p.expr1[i])])
             return thisList
         else:
-            return [('<=', p.expr)]
+            return [('>', p.expr)]
 
     @_('COMMA NOTEQUALS expr')
     def inPart(self, p):
         if isinstance(p.expr, list):
-            thisList = p.expr
-            for i in range(len(thisList)):
-                thisList[i] = [('!=', thisList[i])]
+            thisList = []
+            for i in range(len(p.expr1)):
+                thisList.append([('!=', p.expr1[i])])
             return thisList
         else:
-            return [('<=', p.expr)]
+            return [('!=', p.expr)]
 
     @_('inPart COMMA expr')
     def inPart(self, p):
         if isinstance(p.expr, list):
-            thisList = p.expr
-            for i in range(len(thisList)):
-                thisList[i] = [('=', thisList[i])]
+            thisList = []
+            for i in range(len(p.expr1)):
+                thisList.append([('=', p.expr1[i])])
             return p.inPart + thisList
         else:
             return p.inPart + [('=', p.expr)]
@@ -1226,9 +1358,9 @@ class SFeelParser(Parser):
     @_('inPart COMMA listPart')
     def inPart(self, p):
         if isinstance(p.listPart, list):
-            thisList = p.listPart
-            for i in range(len(thisList)):
-                thisList[i] = [('=', thisList[i])]
+            thisList = []
+            for i in range(len(p.listPart)):
+                thisList.apend([('=', p.listPart[i])])
             return p.inPart + thisList
         else:
             return p.inPart + [('=', p.listPart)]
@@ -1236,18 +1368,18 @@ class SFeelParser(Parser):
     @_('listPart COMMA inPart')
     def inPart(self, p):
         if isinstance(p.listPart, list):
-            thisList = p.listPart
-            for i in range(len(thisList)):
-                thisList[i] = [('=', thisList[i])]
+            thisList = []
+            for i in range(len(p.listPart)):
+                thisList.append([('=', p.listPart[i])])
             return thisList + p.inPart
         else:
             return [('=', p.listPart)] + p.inPart
 
     @_('inStart listPart RPAREN')
     def expr(self, p):
-        partList = p.listPart
-        for i in range(len(partList)):
-            partList[i] = ('=', partList[i])
+        partList = []
+        for i in range(len(p.listPart)):
+            partList.append(('=', p.listPart[i]))
         thisList = p.inStart + partList
         return self.inFunc(thisList)
 

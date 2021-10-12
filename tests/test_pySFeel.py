@@ -282,20 +282,152 @@ class TestClass:
         assert 'errors' not in status
         assert retval == True
 
-    def test_add(self):
+    def test_add1(self):
+        SFeel = '[1, 2] + [3, 4]'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == [1, 2, 3, 4]
+    
+    def test_add2(self):
         SFeel = '1 + 1'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
         assert retval == 2
     
-    def test_subtract(self):
+    def test_add2a(self):
+        SFeel = '[1] + 1'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 2
+    
+    def test_add2b(self):
+        SFeel = '1 + [1]'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 2
+    
+    def test_add3(self):
+        SFeel = '"a" + "b"'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 'ab'
+    
+    def test_add4(self):
+        SFeel = '["a", "b", "c"] + "d"'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == ['a', 'b', 'c', 'd']
+    
+    def test_add5(self):
+        SFeel = '2021-03-05T12:00:00 + PT3H10M'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime(year=2021, month=3, day=5, hour=15, minute=10)
+    
+    def test_add6(self):
+        SFeel = '2021-03-05T12:00:00 + P2Y2M'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime(year=2023, month=5, day=5, hour=12, minute=0)
+    
+    def test_add7(self):
+        SFeel = 'PT3H10M + 2021-03-05T12:00:00'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime(year=2021, month=3, day=5, hour=15, minute=10)
+    
+    def test_add8(self):
+        SFeel = 'P2Y2M + 2021-03-05T12:00:00'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime(year=2023, month=5, day=5, hour=12, minute=0)
+    
+    def test_add9(self):
+        SFeel = 'PT2H4M + PT3H10M'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.timedelta(seconds=(5*60+14)*60)
+    
+    def test_add10(self):
+        SFeel = '2021-03-05T12:00:00 + P2Y2M'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime(year=2023, month=5, day=5, hour=12, minute=0)
+    
+    def test_add11(self):
+        SFeel = '12:00:00 + PT3H10M'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.time(hour=15,minute=10)
+    
+    def test_add12(self):
+        SFeel = 'PT3H10M + 12:00:00'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.time(hour=15, minute=10)
+    
+    def test_subtract1(self):
         SFeel = '1 - 1'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
         assert retval == 0
       
-    def test_multiply(self):
+    def test_subtract1a(self):
+        SFeel = '[1] - 1'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 0
+      
+    def test_subtract1b(self):
+        SFeel = '1 - [1]'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 0
+      
+    def test_subtract2(self):
+        SFeel = '2021-03-03T00:00:00 - 2021-03-02T00:00:00'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.timedelta(days=1)
+      
+    def test_subtract3(self):
+        SFeel = '2021-03-07T14:45:00 - P1DT6H15M'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime(year=2021, month=3, day=6, hour=8, minute=30)
+      
+    def test_subtract4(self):
+        SFeel = '2021-03-07T14:45:00 - P1Y1M'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime(year=2020, month=2, day=7, hour=14, minute=45)
+      
+    def test_subtract5(self):
+        SFeel = '14:45:00 - 10:30:00'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.timedelta(seconds=(4*60+15)*60)
+      
+    def test_subtract6(self):
+        SFeel = '14:45:00 - PT10H30M'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.time(hour=4, minute=15)
+      
+    def test_subtract7(self):
+        SFeel = 'PT14H15M - PT10H30M'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.timedelta(seconds=(3*60+45)*60)
+      
+    def test_multiply1(self):
         SFeel = '2 * 2'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 4
+            
+    def test_multiply2(self):
+        SFeel = '2 * [2]'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
         assert retval == 4
@@ -455,6 +587,18 @@ class TestClass:
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
         assert retval == -datetime.timedelta(days=0, seconds=61*60 + 5, milliseconds=500)
+
+    def test_duration5(self):
+        SFeel = '-P1Y1M'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == -13
+
+    def test_duration6(self):
+        SFeel = 'P0Y11M'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 11
 
     def test_null(self):
         SFeel = 'null'
@@ -910,7 +1054,7 @@ class TestClass:
         SFeel = 'mode(6, 3, 9, 6, 6)'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == 6
+        assert retval == [6]
 
     def test_mode2(self):
         SFeel = 'mode([6, 1, 9, 6, 1])'
@@ -1127,3 +1271,33 @@ class TestClass:
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
         assert retval == {'a':[1, 2], 'b':2, 'c':{'d':3, 'e':'e'}}
+
+    def test_getValue(self):
+        SFeel = 'get value({a:[1, 2], b:2, c:{d:3, e:"e"}}, a)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == [1, 2]
+
+    def test_entries1(self):
+        SFeel = 'get entries({a:[1, 2], b:2, c:{d:3, e:"e"}})'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == [{'key':'a', 'value':[1, 2]}, {'key':'b', 'value':2}, {'key':'c', 'value':{'d':3, 'e':'e'}}]
+
+    def test_entries2a(self):
+        SFeel = 'get entries({a:[1, 2], b:2, c:{d:3, e:"e"}})[item key="a"]'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == [{'key':'a', 'value':[1, 2]}]
+
+    def test_entries2b(self):
+        SFeel = '[{key:"a", value:[1, 2]}].value'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == [[1, 2]]
+
+    def test_entries3(self):
+        SFeel = 'get entries({a:[1, 2], b:2, c:{d:3, e:"e"}})[item key="a"].value'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == [[1, 2]]
