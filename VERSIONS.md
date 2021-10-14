@@ -1,3 +1,4 @@
+### 1.2.1 - Fixed bug in in() function
 ### 1.2.0 - First candidate for a production release
 * fixed addition and subtraction of durations
 * removed addition of Contexts [not defined in DMN and non-commutative, result depended upon order of Contexts]
