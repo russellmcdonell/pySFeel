@@ -282,6 +282,54 @@ class TestClass:
         assert 'errors' not in status
         assert retval == True
 
+    def test_in4(self):
+        SFeel = '3 in(1,2,3)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_in5(self):
+        SFeel = '2 in(<1,!=2,>3)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_in6(self):
+        SFeel = '"c" in("abc")'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_in7(self):
+        SFeel = '"c" in("a","b","c")'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_in8(self):
+        SFeel = '"c" in(="a",="b",!="c")'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_notin1(self):
+        SFeel = 'not(4 in [3..5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_notin2(self):
+        SFeel = 'not(2 in(<1,!=2,>3))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_notin3(self):
+        SFeel = 'not("c" in(="a",="b",!="c"))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
     def test_add1(self):
         SFeel = '[1, 2] + [3, 4]'
         (status, retval) = parser.sFeelParse(SFeel)

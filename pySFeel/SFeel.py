@@ -1294,13 +1294,34 @@ class SFeelParser(Parser):
         else:
             return [p.expr0] + [('>', p.expr1)]
 
+    @_('expr INFUNC EQUALS expr')
+    def inStart(self, p):
+        ''' item in list items'''
+        if isinstance(p.expr1, list):
+            thisList = []
+            for i in range(len(p.expr1)):
+                thisList.append([('=', p.expr1[i])])
+            return [p.expr0] + thisList
+        else:
+            return [p.expr0] + [('=', p.expr1)]
+
+    @_('expr INFUNC NOTEQUALS expr')
+    def inStart(self, p):
+        ''' item in list items'''
+        if isinstance(p.expr1, list):
+            thisList = []
+            for i in range(len(p.expr1)):
+                thisList.append([('!=', p.expr1[i])])
+            return [p.expr0] + thisList
+        else:
+            return [p.expr0] + [('!=', p.expr1)]
 
     @_('COMMA LTTHANEQUAL expr')
     def inPart(self, p):
         if isinstance(p.expr, list):
             thisList = []
-            for i in range(len(p.expr1)):
-                thisList.append([('<=', p.expr1[i])])
+            for i in range(len(p.expr)):
+                thisList.append([('<=', p.expr[i])])
             return thisList
         else:
             return [('<=', p.expr)]
@@ -1309,18 +1330,18 @@ class SFeelParser(Parser):
     def inPart(self, p):
         if isinstance(p.expr, list):
             thisList = []
-            for i in range(len(p.expr1)):
-                thisList.append([('<', p.expr1[i])])
+            for i in range(len(p.expr)):
+                thisList.append([('<', p.expr[i])])
             return thisList
         else:
-            return [('<=', p.expr)]
+            return [('<', p.expr)]
 
     @_('COMMA GTTHANEQUAL expr')
     def inPart(self, p):
         if isinstance(p.expr, list):
             thisList = []
-            for i in range(len(p.expr1)):
-                thisList.append([('>=', p.expr1[i])])
+            for i in range(len(p.expr)):
+                thisList.append([('>=', p.expr[i])])
             return thisList
         else:
             return [('>=', p.expr)]
@@ -1329,8 +1350,8 @@ class SFeelParser(Parser):
     def inPart(self, p):
         if isinstance(p.expr, list):
             thisList = []
-            for i in range(len(p.expr1)):
-                thisList.append([('>', p.expr1[i])])
+            for i in range(len(p.expr)):
+                thisList.append([('>', p.expr[i])])
             return thisList
         else:
             return [('>', p.expr)]
@@ -1339,41 +1360,163 @@ class SFeelParser(Parser):
     def inPart(self, p):
         if isinstance(p.expr, list):
             thisList = []
-            for i in range(len(p.expr1)):
-                thisList.append([('!=', p.expr1[i])])
+            for i in range(len(p.expr)):
+                thisList.append([('!=', p.expr[i])])
             return thisList
         else:
             return [('!=', p.expr)]
+
+    @_('COMMA EQUALS expr')
+    def inPart(self, p):
+        if isinstance(p.expr, list):
+            thisList = []
+            for i in range(len(p.expr)):
+                thisList.append([('=', p.expr[i])])
+            return thisList
+        else:
+            return [('=', p.expr)]
+
+    @_('inPart COMMA LTTHANEQUAL expr')
+    def inPart(self, p):
+        if isinstance(p.expr, list):
+            thisList = []
+            for i in range(len(p.expr)):
+                thisList.append([('<=', p.expr[i])])
+            return p.inPart + thisList
+        else:
+            return p.inPart + [('<=', p.expr)]
+
+    @_('inPart COMMA LTTHAN expr')
+    def inPart(self, p):
+        if isinstance(p.expr, list):
+            thisList = []
+            for i in range(len(p.expr)):
+                thisList.append([('<', p.expr[i])])
+            return p.inPart + thisList
+        else:
+            return p.inPart + [('<', p.expr)]
+
+    @_('inPart COMMA GTTHANEQUAL expr')
+    def inPart(self, p):
+        if isinstance(p.expr, list):
+            thisList = []
+            for i in range(len(p.expr)):
+                thisList.append([('>=', p.expr[i])])
+            return p.inPart + thisList
+        else:
+            return p.inPart + [('>=', p.expr)]
+
+    @_('inPart COMMA GTTHAN expr')
+    def inPart(self, p):
+        if isinstance(p.expr, list):
+            thisList = []
+            for i in range(len(p.expr)):
+                thisList.append([('>', p.expr[i])])
+            return p.inPart + thisList
+        else:
+            return p.inPart + [('>', p.expr)]
+
+    @_('inPart COMMA NOTEQUALS expr')
+    def inPart(self, p):
+        if isinstance(p.expr, list):
+            thisList = []
+            for i in range(len(p.expr)):
+                thisList.append([('!=', p.expr[i])])
+            return p.inPart + thisList
+        else:
+            return p.inPart + [('!=', p.expr)]
+
+    @_('inPart COMMA EQUALS expr')
+    def inPart(self, p):
+        if isinstance(p.expr, list):
+            thisList = []
+            for i in range(len(p.expr)):
+                thisList.append([('=', p.expr[i])])
+            return p.inPart + thisList
+        else:
+            return p.inPart + [('=', p.expr)]
 
     @_('inPart COMMA expr')
     def inPart(self, p):
         if isinstance(p.expr, list):
             thisList = []
-            for i in range(len(p.expr1)):
-                thisList.append([('=', p.expr1[i])])
+            for i in range(len(p.expr)):
+                thisList.append([('=', p.expr[i])])
             return p.inPart + thisList
         else:
             return p.inPart + [('=', p.expr)]
 
-    @_('inPart COMMA listPart')
+    @_('listPart COMMA LTTHANEQUAL expr')
     def inPart(self, p):
-        if isinstance(p.listPart, list):
-            thisList = []
-            for i in range(len(p.listPart)):
-                thisList.apend([('=', p.listPart[i])])
-            return p.inPart + thisList
+        thisList = []
+        for i in range(len(p.listPart)):
+            thisList.append(('<=', p.listPart[i]))
+        if isinstance(p.expr, list):
+            for i in range(len(p.expr)):
+                thisList.append([('<=', p.expr[i])])
         else:
-            return p.inPart + [('=', p.listPart)]
+            thisList.append([('<=', p.expr)])
+        return thisList
 
-    @_('listPart COMMA inPart')
+    @_('listPart COMMA LTTHAN expr')
     def inPart(self, p):
-        if isinstance(p.listPart, list):
-            thisList = []
-            for i in range(len(p.listPart)):
-                thisList.append([('=', p.listPart[i])])
-            return thisList + p.inPart
+        thisList = []
+        for i in range(len(p.listPart)):
+            thisList.append(('<', p.listPart[i]))
+        if isinstance(p.expr, list):
+            for i in range(len(p.expr)):
+                thisList.append([('<', p.expr[i])])
         else:
-            return [('=', p.listPart)] + p.inPart
+            thisList.append([('<', p.expr)])
+        return thisList
+
+    @_('listPart COMMA GTTHANEQUAL expr')
+    def inPart(self, p):
+        thisList = []
+        for i in range(len(p.listPart)):
+            thisList.append(('>=', p.listPart[i]))
+        if isinstance(p.expr, list):
+            for i in range(len(p.expr)):
+                thisList.append([('>=', p.expr[i])])
+        else:
+            thisList.append([('>=', p.expr)])
+        return thisList
+
+    @_('listPart COMMA GTTHAN expr')
+    def inPart(self, p):
+        thisList = []
+        for i in range(len(p.listPart)):
+            thisList.append(('>', p.listPart[i]))
+        if isinstance(p.expr, list):
+            for i in range(len(p.expr)):
+                thisList.append([('>', p.expr[i])])
+        else:
+            thisList.append([('>', p.expr)])
+        return thisList
+
+    @_('listPart COMMA NOTEQUALS expr')
+    def inPart(self, p):
+        thisList = []
+        for i in range(len(p.listPart)):
+            thisList.append(('!=', p.listPart[i]))
+        if isinstance(p.expr, list):
+            for i in range(len(p.expr)):
+                thisList.append([('!=', p.expr[i])])
+        else:
+            thisList.append([('!=', p.expr)])
+        return thisList
+
+    @_('listPart COMMA EQUALS expr')
+    def inPart(self, p):
+        thisList = []
+        for i in range(len(p.listPart)):
+            thisList.append(('=', p.listPart[i]))
+        if isinstance(p.expr, list):
+            for i in range(len(p.expr)):
+                thisList.append([('=', p.expr[i])])
+        else:
+            thisList.append([('=', p.expr)])
+        return thisList
 
     @_('inStart listPart RPAREN')
     def expr(self, p):
