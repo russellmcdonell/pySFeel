@@ -2,3 +2,4 @@ sly
 datetime
 python-dateutil
 statistics
+docutils<0.18
