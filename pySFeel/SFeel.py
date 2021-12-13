@@ -3,6 +3,7 @@
 # -----------------------------------------------------------------------------
 
 from enum import IntFlag
+from os import truncate
 from sly import Lexer, Parser
 import re
 import datetime
@@ -22,9 +23,13 @@ class SFeelLexer(Lexer):
               MEDIANFUNC, STDDEVFUNC, MODEFUNC,
               DECIMALFUNC, FLOORFUNC, CEILINGFUNC, ABSFUNC, MODULOFUNC,SQRTFUNC,
               LOGFUNC, EXPFUNC, ODDFUNC, EVENFUNC,
-              VALUETFUNC, VALUEDTFUNC, VALUEDT1FUNC, VALUEDTDFUNC, VALUEDTD1FUNC,
+              VALUETFUNC, VALUET1FUNC, VALUEDTFUNC, VALUEDT1FUNC, VALUEDTDFUNC, VALUEDTD1FUNC,
               VALUEYMDFUNC, VALUEYMD1FUNC,
               DURATIONFUNC, YEARSANDMONTHSDURATIONFUNC, GETVALUEFUNC, GETENTRIESFUNC,
+              ISFUNC,
+              BEFOREFUNC, AFTERFUNC, MEETSFUNC, METBYFUNC, OVERLAPSFUNC, OVERLAPSBEFOREFUNC, OVERLAPSAFTERFUNC,
+              FINISHESFUNC, FINISHEDBYFUNC, INCLUDESFUNC, DURINGFUNC, STARTSFUNC, STARTEDBYFUNC, COINCIDESFUNC,
+              DAYOFYEARFUNC, DAYOFWEEKFUNC, MONTHOFYEARFUNC, WEEKOFYEARFUNC,
               NAME, STRING, NULL,
               LBRACKET, RBRACKET,
               EQUALS, NOTEQUALS, LTTHANEQUAL, GTTHANEQUAL, LTTHAN, GTTHAN,
@@ -93,6 +98,7 @@ class SFeelLexer(Lexer):
     ODDFUNC = r'odd\('
     EVENFUNC = r'even\('
     VALUETFUNC = r'valuet\('
+    VALUET1FUNC = r'valuet-1\('
     VALUEDTFUNC = r'valuedt\('
     VALUEDT1FUNC = r'valuedt-1\('
     VALUEDTDFUNC = r'valuedtd\('
@@ -103,6 +109,25 @@ class SFeelLexer(Lexer):
     YEARSANDMONTHSDURATIONFUNC = r'years and months duration\('
     GETVALUEFUNC = r'get\s+value\('
     GETENTRIESFUNC = r'get\s+entries\('
+    ISFUNC = r'is\('
+    BEFOREFUNC = r'before\('
+    AFTERFUNC = r'after\('
+    MEETSFUNC = r'meets\('
+    METBYFUNC = r'met by\('
+    OVERLAPSFUNC = r'overlaps\('
+    OVERLAPSBEFOREFUNC = r'overlaps before\('
+    OVERLAPSAFTERFUNC = r'overlaps after\('
+    FINISHESFUNC = r'finishes\('
+    FINISHEDBYFUNC = r'finished by\('
+    INCLUDESFUNC = r'includes\('
+    DURINGFUNC = r'during\('
+    STARTSFUNC = r'starts\('
+    STARTEDBYFUNC = r'started by\('
+    COINCIDESFUNC = r'coincides\('
+    DAYOFYEARFUNC = r'day of year\('
+    DAYOFWEEKFUNC = r'day of week\('
+    MONTHOFYEARFUNC = r'month of year\('
+    WEEKOFYEARFUNC = r'week of year\('
     DTDURATION = r'-?P((([0-9]+D)(T(([0-9]+H)([0-9]+M)?([0-9]+(\.[0-9]+)?S)?|([0-9]+M)([0-9]+(\.[0-9]+)?S)?|([0-9]+(\.[0-9]+)?S)))?)|(T(([0-9]+H)([0-9]+M)?([0-9]+(\.[0-9]+)?S)?|([0-9]+M)([0-9]+(\.[0-9]+)?S)?|([0-9]+(\.[0-9]+)?S))))'
     YMDURATION = r'-?P[0-9]+Y[0-9]+M'
     NAME = (u'[?A-Z_a-z' +
@@ -229,11 +254,14 @@ class SFeelParser(Parser):
             elif isinstance(p.expr0, float):
                 if not isinstance(lowVal, float) or not isinstance(highVal, float):
                     return False
-            elif isinstance(p.expr0, datetime.date):
-                if not isinstance(lowVal, datetime.date) or not isinstance(highVal, datetime.date):
+            elif isinstance(p.expr0, datetime.date):                # True for both dates and datetimes
+                if (not isinstance(lowVal, datetime.date)) and (not isinstance(highVal, datetime.date)):
+                    return False
+            elif isinstance(p.expr0, datetime.time):
+                if (not isinstance(lowVal, datetime.time)) or (not isinstance(highVal, datetime.time)):
                     return False
             elif isinstance(p.expr0, datetime.timedelta):
-                if not isinstance(lowVal, datetime.timedelta) or not isinstance(highVal, datetime.timedelta):
+                if (not isinstance(lowVal, datetime.timedelta)) or (not isinstance(highVal, datetime.timedelta)):
                     return False
             else:
                 return False
@@ -256,11 +284,14 @@ class SFeelParser(Parser):
                     elif isinstance(p.expr0, float):
                         if not isinstance(lowVal, float) or not isinstance(highVal, float):
                             continue
-                    elif isinstance(p.expr0, datetime.date):
-                        if not isinstance(lowVal, datetime.date) or not isinstance(highVal, datetime.date):
+                    elif isinstance(p.expr0, datetime.date):                # True for both dates and datetimes
+                        if (not isinstance(lowVal, datetime.date)) or (not isinstance(highVal, datetime.datetime)):
+                            continue
+                    elif isinstance(p.expr0, datetime.time):
+                        if (not isinstance(lowVal, datetime.time)) or (not isinstance(highVal, datetime.time)):
                             continue
                     elif isinstance(p.expr0, datetime.timedelta):
-                        if not isinstance(lowVal, datetime.timedelta) or not isinstance(highVal, datetime.timedelta):
+                        if (not isinstance(lowVal, datetime.timedelta)) or (not isinstance(highVal, datetime.timedelta)):
                             continue
                     else:
                         return False
@@ -280,7 +311,9 @@ class SFeelParser(Parser):
              return p.expr0 == p.expr1
         elif isinstance(p.expr0, float) and isinstance(p.expr1, float):
             return p.expr0 == p.expr1
-        elif isinstance(p.expr0, datetime.date) and isinstance(p.expr1, datetime.date):
+        elif isinstance(p.expr0, datetime.date) and isinstance(p.expr1, datetime.date):         # True for both dates and datetimes
+            return p.expr0 == p.expr1
+        elif isinstance(p.expr0, datetime.time) and isinstance(p.expr1, datetime.time):
             return p.expr0 == p.expr1
         elif isinstance(p.expr0, datetime.timedelta) and isinstance(p.expr1, datetime.timedelta):
             return p.expr0 == p.expr1
@@ -296,7 +329,9 @@ class SFeelParser(Parser):
             return p.expr0 < p.expr1
         elif isinstance(p.expr0, float) and isinstance(p.expr1, float):
             return p.expr0 < p.expr1
-        elif isinstance(p.expr0, datetime.date) and isinstance(p.expr1, datetime.date):
+        elif isinstance(p.expr0, datetime.date) and isinstance(p.expr1, datetime.date):         # True for both dates and datetimes
+            return p.expr0 < p.expr1
+        elif isinstance(p.expr0, datetime.time) and isinstance(p.expr1, datetime.time):
             return p.expr0 < p.expr1
         elif isinstance(p.expr0, datetime.timedelta) and isinstance(p.expr1, datetime.timedelta):
             return p.expr0 < p.expr1
@@ -311,7 +346,9 @@ class SFeelParser(Parser):
             return p.expr0 > p.expr1
         elif isinstance(p.expr0, float) and isinstance(p.expr1, float):
             return p.expr0 > p.expr1
-        elif isinstance(p.expr0, datetime.date) and isinstance(p.expr1, datetime.date):
+        elif isinstance(p.expr0, datetime.date) and isinstance(p.expr1, datetime.date):         # True for both dates and datetimes
+            return p.expr0 > p.expr1
+        elif isinstance(p.expr0, datetime.time) and isinstance(p.expr1, datetime.time):
             return p.expr0 > p.expr1
         elif isinstance(p.expr0, datetime.timedelta) and isinstance(p.expr1, datetime.timedelta):
             return p.expr0 > p.expr1
@@ -326,7 +363,9 @@ class SFeelParser(Parser):
             return p.expr0 <= p.expr1
         elif isinstance(p.expr0, float) and isinstance(p.expr1, float):
             return p.expr0 <= p.expr1
-        elif isinstance(p.expr0, datetime.date) and isinstance(p.expr1, datetime.date):
+        elif isinstance(p.expr0, datetime.date) and isinstance(p.expr1, datetime.date):         # True for both dates and datetimes
+            return p.expr0 <= p.expr1
+        elif isinstance(p.expr0, datetime.time) and isinstance(p.expr1, datetime.time):
             return p.expr0 <= p.expr1
         elif isinstance(p.expr0, datetime.timedelta) and isinstance(p.expr1, datetime.timedelta):
             return p.expr0 <= p.expr1
@@ -341,7 +380,9 @@ class SFeelParser(Parser):
             return p.expr0 >= p.expr1
         elif isinstance(p.expr0, float) and isinstance(p.expr1, float):
             return p.expr0 >= p.expr1
-        elif isinstance(p.expr0, datetime.date) and isinstance(p.expr1, datetime.date):
+        elif isinstance(p.expr0, datetime.date) and isinstance(p.expr1, datetime.date):         # True for both dates and datetimes
+            return p.expr0 >= p.expr1
+        elif isinstance(p.expr0, datetime.time) and isinstance(p.expr1, datetime.time):
             return p.expr0 >= p.expr1
         elif isinstance(p.expr0, datetime.timedelta) and isinstance(p.expr1, datetime.timedelta):
             return p.expr0 >= p.expr1
@@ -377,7 +418,7 @@ class SFeelParser(Parser):
             return var0 + var1
         if isinstance(var0, str) and isinstance(var1, str):         # Concatenation of strings
             return var0 + var1
-        if isinstance(var0, datetime.datetime):             # date or datetime
+        if isinstance(var0, datetime.date):                     # True for bothe dates and datetimes
             if isinstance(var1, datetime.timedelta):            # date or datetime plus days and time duration
                 return var0 + var1
             elif isinstance(var1, float):                       # date or datetime plus years and months duration
@@ -392,7 +433,7 @@ class SFeelParser(Parser):
                 return (var0).replace(year=int(year), month=int(month))
             else:
                 return None
-        if isinstance(var1, datetime.datetime):        # date or datetime
+        if isinstance(var1, datetime.date):                 # Turee for both dates and datetimes
             if isinstance(var0, datetime.timedelta):         # days and time duration plus date or datetime
                 return var0 + var1
             elif isinstance(var0, float):                    # years and months duration plus date or datetime
@@ -432,9 +473,12 @@ class SFeelParser(Parser):
             var1 = p.expr1
         if isinstance(var0, float) and isinstance(var1, float):     # Include subtraction of two durations(yearMonth)
             return var0 - var1
-        if isinstance(var0, datetime.datetime):             # date/datetime minus date/datetime or duration
-            if isinstance(var1, datetime.datetime):             # date/time minus date/time
-                return var0 - var1
+        if isinstance(var0, datetime.date):                         # True for both dates and datetimes
+            if isinstance(var1, datetime.date):             # date or datetime minus date or datetime
+                try:
+                    return var0 - var1
+                except:
+                    return None
             if isinstance(var1, datetime.timedelta):         # date/datetime minus days and time duration
                 return var0 - var1
             if isinstance(var1, float):                    # date/datetime minus years and months duration
@@ -1000,8 +1044,8 @@ class SFeelParser(Parser):
         ''' Convert datetime.date/datetime.time/str into datetime.date '''
         if isinstance(p.expr, datetime.time):
             return datetime.date(year=0, month=0, day=0)
-        elif isinstance(p.expr, datetime.datetime):
-            if type(p.expr) is datetime.datetime:
+        elif isinstance(p.expr, datetime.date):         # True for both dates and datetimes
+            if type(p.expr) is datetime.datetime:           # Only true for datetimes
                 return p.expr.date()
             else:
                 return p.expr
@@ -1052,13 +1096,16 @@ class SFeelParser(Parser):
         ''' Convert datetime.date/datetime.time/str into datetime.time '''
         if isinstance(p.expr, datetime.time):
             return p.expr
-        elif isinstance(p.expr, datetime.datetime):
-            if type(p.expr) is datetime.datetime:
+        elif isinstance(p.expr, datetime.date):             # True for dates and datetimes
+            if type(p.expr) is datetime.datetime:               # Only true for datetimes
                 return p.expr.time()
             else:
                 return datetime.time(hour=0, minute=0, second=0)
         elif isinstance(p.expr, str):
-            return dateutil.parser.parse(p.expr).time()
+            try:
+                return dateutil.parser.parse(p.expr).timetz()
+            except:
+                return None
         else:
             return None
 
@@ -1067,20 +1114,23 @@ class SFeelParser(Parser):
         ''' Convert datetime.date/datetime.time/str into datetime.datetime '''
         if isinstance(p.expr, datetime.time):
             return datetime.datetime.combine(datetime.date(year=0, month=0, day=0), p.expr)
-        elif isinstance(p.expr, datetime.datetime):
-            if type(p.expr) is datetime.datetime:
+        elif isinstance(p.expr, datetime.date):             # True for both dates and datetimes
+            if type(p.expr) is datetime.datetime:               # Only true for datetimes
                 return p.expr
             else:
                 return datetime.datetime.combine(p.expr, datetime.time(hour=0, minute=0, second=0))
         elif isinstance(p.expr, str):
-            return dateutil.parser.parse(p.expr)
+            try:
+                return dateutil.parser.parse(p.expr)
+            except:
+                return None
         else:
             return None
 
     @_('DATEANDTIMEFUNC expr COMMA expr RPAREN')
     def expr(self, p):
         ''' Convert date, time into datetime.datetime '''
-        if type(p.expr0) is datetime.date:
+        if isinstance(p.expr0, datetime.date) and (type(p.expr0) is datetime.date):
             if isinstance(p.expr1, datetime.time):
                 return datetime.datetime.combine(p.expr0, p.expr1)
         return None
@@ -1089,7 +1139,10 @@ class SFeelParser(Parser):
     def expr(self, p):
         ''' Convert str into datetime.datetime '''
         if isinstance(p.expr, str):
-            return dateutil.parser.parse(p.expr)
+            try:
+                return dateutil.parser.parse(p.expr)
+            except:
+                return None
         return None
 
     @_('NUMBERFUNC expr COMMA expr COMMA expr RPAREN')
@@ -1139,10 +1192,11 @@ class SFeelParser(Parser):
             return str(p.expr)
         if isinstance(p.expr, str):
             return p.expr
-        elif isinstance(p.expr, datetime.date):
-            return p.expr.isoformat()
-        elif isinstance(p.expr, datetime.datetime):
-            return p.expr.isoformat(sep='T')
+        elif isinstance(p.expr, datetime.date):         # True for both dates and datetimes
+            if type(p.expr) is datetime.datetime:           # Only true for datetimes
+                return p.expr.isoformat(sep='T')
+            else:
+                return p.expr.isoformat()
         elif isinstance(p.expr, datetime.time):
             return p.expr.isoformat()
         elif isinstance(p.expr, datetime.timedelta):
@@ -1151,7 +1205,7 @@ class SFeelParser(Parser):
             duration = int(duration / 60)
             mins = duration % 60
             duration = int(duration / 60)
-            hour = duration % 24
+            hours = duration % 24
             days = int(duration / 24)
             return 'P%dDT%dH%dM%dS' % (days, hours, mins, secs)
 
@@ -1177,8 +1231,11 @@ class SFeelParser(Parser):
                 elif isinstance(inValue, float):
                     if not isinstance(lowVal, float) or not isinstance(highVal, float):
                         continue
-                elif isinstance(inValue, datetime.date):
+                elif isinstance(inValue, datetime.date):            # True for both dates and datetimes
                     if not isinstance(lowVal, datetime.date) or not isinstance(highVal, datetime.date):
+                        continue
+                elif isinstance(inValue, datetime.timedelta):
+                    if not isinstance(lowVal, datetime.timedelta) or not isinstance(highVal, datetime.timedelta):
                         continue
                 else:
                     continue
@@ -1241,7 +1298,7 @@ class SFeelParser(Parser):
 
     @_('expr INFUNC expr')
     def inStart(self, p):
-        ''' item in list items'''
+        ''' item in list of items'''
         if isinstance(p.expr1, list):
             thisList = []
             for i in range(len(p.expr1)):
@@ -1252,7 +1309,7 @@ class SFeelParser(Parser):
 
     @_('expr INFUNC LTTHANEQUAL expr')
     def inStart(self, p):
-        ''' item in list items'''
+        ''' item <= list of items'''
         if isinstance(p.expr1, list):
             thisList = []
             for i in range(len(p.expr1)):
@@ -1263,7 +1320,7 @@ class SFeelParser(Parser):
 
     @_('expr INFUNC LTTHAN expr')
     def inStart(self, p):
-        ''' item in list items'''
+        ''' item < list of items'''
         if isinstance(p.expr1, list):
             thisList = []
             for i in range(len(p.expr1)):
@@ -1274,7 +1331,7 @@ class SFeelParser(Parser):
 
     @_('expr INFUNC GTTHANEQUAL expr')
     def inStart(self, p):
-        ''' item in list items'''
+        ''' item >= list of items'''
         if isinstance(p.expr1, list):
             thisList = []
             for i in range(len(p.expr1)):
@@ -1285,7 +1342,7 @@ class SFeelParser(Parser):
 
     @_('expr INFUNC GTTHAN expr')
     def inStart(self, p):
-        ''' item in list items'''
+        ''' item > list of items'''
         if isinstance(p.expr1, list):
             thisList = []
             for i in range(len(p.expr1)):
@@ -1296,7 +1353,7 @@ class SFeelParser(Parser):
 
     @_('expr INFUNC EQUALS expr')
     def inStart(self, p):
-        ''' item in list items'''
+        ''' item = list of items'''
         if isinstance(p.expr1, list):
             thisList = []
             for i in range(len(p.expr1)):
@@ -1307,7 +1364,7 @@ class SFeelParser(Parser):
 
     @_('expr INFUNC NOTEQUALS expr')
     def inStart(self, p):
-        ''' item in list items'''
+        ''' item != list of items'''
         if isinstance(p.expr1, list):
             thisList = []
             for i in range(len(p.expr1)):
@@ -1559,7 +1616,7 @@ class SFeelParser(Parser):
 
     @_('SUBSTRINGFUNC expr COMMA expr COMMA expr RPAREN')
     def expr(self, p):
-        ''' substring from a string'''
+        ''' substring from a substring'''
         if not isinstance(p.expr0, str):
             return None
         if not isinstance(p.expr1, float) or (int(p.expr1) != p.expr1):
@@ -1602,14 +1659,14 @@ class SFeelParser(Parser):
 
     @_('UPPERCASEFUNC expr RPAREN')
     def expr(self, p):
-        ''' length of a string'''
+        ''' uppercase of a string'''
         if not isinstance(p.expr, str):
             return None
         return p.expr.upper()
 
     @_('LOWERCASEFUNC expr RPAREN')
     def expr(self, p):
-        ''' length of a string'''
+        ''' lowercase of a string'''
         if not isinstance(p.expr, str):
             return None
         return p.expr.lower()
@@ -1628,7 +1685,7 @@ class SFeelParser(Parser):
 
     @_('SUBSTRINGAFTERFUNC expr COMMA expr RPAREN')
     def expr(self, p):
-        ''' substring before string'''
+        ''' substring after string'''
         if not isinstance(p.expr0, str):
             return None
         if not isinstance(p.expr1, str):
@@ -1640,7 +1697,7 @@ class SFeelParser(Parser):
 
     @_('REPLACEFUNC expr COMMA expr COMMA expr COMMA expr RPAREN')
     def expr(self, p):
-        ''' replace substring in string'''
+        ''' replace substring in string with flags'''
         if not isinstance(p.expr0, str):
             return None
         if not isinstance(p.expr1, str):
@@ -1678,7 +1735,7 @@ class SFeelParser(Parser):
 
     @_('CONTAINSFUNC expr COMMA expr RPAREN')
     def expr(self, p):
-        ''' does string contain substring'''
+        ''' string contain substring'''
         if not isinstance(p.expr0, str):
             return None
         if not isinstance(p.expr1, str):
@@ -1687,7 +1744,7 @@ class SFeelParser(Parser):
 
     @_('STARTSWITHFUNC expr COMMA expr RPAREN')
     def expr(self, p):
-        ''' does string start with substring'''
+        ''' string start with substring'''
         if not isinstance(p.expr0, str):
             return None
         if not isinstance(p.expr1, str):
@@ -1696,7 +1753,7 @@ class SFeelParser(Parser):
 
     @_('ENDSWITHFUNC expr COMMA expr RPAREN')
     def expr(self, p):
-        ''' does string end with substring'''
+        ''' string ends with substring'''
         if not isinstance(p.expr0, str):
             return None
         if not isinstance(p.expr1, str):
@@ -1705,7 +1762,7 @@ class SFeelParser(Parser):
 
     @_('MATCHESFUNC expr COMMA expr COMMA expr RPAREN')
     def expr(self, p):
-        ''' does string match string'''
+        ''' string re matchs string with flags'''
         if not isinstance(p.expr0, str):
             return None
         if not isinstance(p.expr1, str):
@@ -1728,7 +1785,7 @@ class SFeelParser(Parser):
 
     @_('MATCHESFUNC expr COMMA expr RPAREN')
     def expr(self, p):
-        ''' does string match string'''
+        ''' string re match string'''
         if not isinstance(p.expr0, str):
             return None
         if not isinstance(p.expr1, str):
@@ -1938,7 +1995,7 @@ class SFeelParser(Parser):
 
     @_('SUBLISTFUNC expr COMMA expr COMMA expr RPAREN')
     def expr(self, p):
-        ''' sublist from a list'''
+        ''' sublist from a list with start and end '''
         if not isinstance(p.expr0, list):
             return None
         if not isinstance(p.expr1, float):
@@ -1968,7 +2025,7 @@ class SFeelParser(Parser):
 
     @_('SUBLISTFUNC expr COMMA expr RPAREN')
     def expr(self, p):
-        ''' sublist from a list'''
+        ''' sublist from a list from start '''
         if not isinstance(p.expr0, list):
             return None
         if not isinstance(p.expr1, float):
@@ -1981,7 +2038,7 @@ class SFeelParser(Parser):
 
     @_('APPENDFUNC expr')
     def appendStart(self, p):
-        ''' append item(s) to list '''
+        ''' append item(s) to a list '''
         if isinstance(p.expr, list):
             return p.expr
         else:
@@ -2031,7 +2088,7 @@ class SFeelParser(Parser):
 
     @_('REMOVEFUNC expr COMMA expr RPAREN')
     def expr(self, p):
-        ''' concatinate lists '''
+        ''' remove from a list an item '''
         if not isinstance(p.expr0, list):
             return None
         if not isinstance(p.expr1, float):
@@ -2059,7 +2116,7 @@ class SFeelParser(Parser):
 
     @_('INDEXOFFUNC expr COMMA expr RPAREN')
     def expr(self, p):
-        ''' list of indexes of value in a list '''
+        ''' list of indexes of a value in a list '''
         if not isinstance(p.expr0, list):
             return None
         newList = []
@@ -2138,7 +2195,7 @@ class SFeelParser(Parser):
 
     @_('PRODUCTFUNC expr')
     def productStart(self, p):
-        ''' product number in a list '''
+        ''' product of numbers in a list of numbers '''
         if isinstance(p.expr, list):
             return p.expr
         else:
@@ -2162,7 +2219,7 @@ class SFeelParser(Parser):
 
     @_('MEDIANFUNC expr')
     def medianStart(self, p):
-        ''' median item in list '''
+        ''' median item in list of numbers '''
         if isinstance(p.expr, list):
             return p.expr
         else:
@@ -2186,7 +2243,7 @@ class SFeelParser(Parser):
 
     @_('STDDEVFUNC expr')
     def stddevStart(self, p):
-        ''' stddev item in list '''
+        ''' stddev of a list of numbers '''
         if isinstance(p.expr, list):
             return p.expr
         else:
@@ -2214,7 +2271,7 @@ class SFeelParser(Parser):
 
     @_('MODEFUNC expr')
     def modeStart(self, p):
-        ''' mode item in list '''
+        ''' mode number in list of numbers '''
         if isinstance(p.expr, list):
             return p.expr
         else:
@@ -2246,14 +2303,14 @@ class SFeelParser(Parser):
         ''' floor of a number '''
         if not isinstance(p.expr, float):
             return None
-        return math.floor(p.expr)
+        return float(math.floor(p.expr))
         
     @_('CEILINGFUNC expr RPAREN')
     def expr(self, p):
         ''' ceiling of a number '''
         if not isinstance(p.expr, float):
             return None
-        return math.ceil(p.expr)
+        return float(math.ceil(p.expr))
         
     @_('ABSFUNC expr RPAREN')
     def expr(self, p):
@@ -2276,21 +2333,21 @@ class SFeelParser(Parser):
         ''' absolute of a number '''
         if not isinstance(p.expr, float):
             return None
-        return math.sqrt(p.expr)
+        return float(math.sqrt(p.expr))
         
     @_('LOGFUNC expr RPAREN')
     def expr(self, p):
         ''' log of a number '''
         if not isinstance(p.expr, float):
             return None
-        return math.log(p.expr)
+        return float(math.log(p.expr))
         
     @_('EXPFUNC expr RPAREN')
     def expr(self, p):
         ''' exponential of a number '''
         if not isinstance(p.expr, float):
             return None
-        return math.exp(p.expr)
+        return float(math.exp(p.expr))
         
     @_('ODDFUNC expr RPAREN')
     def expr(self, p):
@@ -2323,25 +2380,43 @@ class SFeelParser(Parser):
             return ((p.hour * 60) + p.minute) * 60 + p.second
         else:
             return None
-        
+
+    @_('VALUET1FUNC expr RPAREN')
+    def expr(self, p):
+        ''' Number of seconds turned into datetime.time '''
+        if isinstance(p.expr, float):
+            val = p.expr
+            while val < 0:
+                val += 86400
+            while val >= 86400:
+                val -= 86400
+            second = val % 60
+            val = int(val / 60)
+            minute = val % 60
+            hour = int(val / 60)
+            return datetime.time(hour=hour, minute=minute, second=second)
+        else:
+            return None
+    
     @_('VALUEDTFUNC expr RPAREN')
     def expr(self, p):
-        ''' String expression turned into datetime.date '''
-        if isinstance(p.expr, str):
-            return dateutil.parser.parse(p.expr).date()
+        ''' Seconds since the epoch '''
+        if isinstance(p.expr, datetime.datetime):           # Only valid for datetimes
+            try:
+                return p.expr.timestamp()
+            except:
+                return None
         else:
             return None
         
     @_('VALUEDT1FUNC expr RPAREN')
     def expr(self, p):
-        ''' Seconds of time turned into a datetime.time '''
+        ''' Seconds of time since epoch turned into a datetime.time '''
         if isinstance(p.expr, float):
-            thisTime = int(p.expr) % (24 * 60 * 60)
-            second = thisTime % 60
-            thisTime = int(thisTime / 60)
-            minute = thisTime % 60
-            hour = int(thisTime / 60)
-            return datetime.time(hour=hour, minute=minute, second=second)
+            try:
+                return datetime.datetime.fromtimestamp(p.expr)
+            except:
+                return None
         else:
             return None
         
@@ -2357,23 +2432,34 @@ class SFeelParser(Parser):
     def expr(self, p):
         ''' Seconds of time turned into a datetime.timedelta '''
         if isinstance(p.expr, float):
-            return datetime.timedelta(seconds=int(p.expr))
+            try:
+                return datetime.timedelta(seconds=int(p.expr))
+            except:
+                return None
         else:
             return None
         
     @_('VALUEYMDFUNC expr RPAREN')
     def expr(self, p):
-        ''' internally, YMD durations are floats '''
-        return p.expr
+        ''' Convert YM duration to months'''
+        # Internally, YM durations are floats
+        if isinstance(p.expr, float):
+            return p.expr
+        else:
+            return None
         
     @_('VALUEYMD1FUNC expr RPAREN')
     def expr(self, p):
-        ''' internally, YMD durations are floats '''
-        return p.expr
+        ''' Convert 'months' to YM duration'''
+        # internally, YM durations are floats '''
+        if isinstance(p.expr, float):
+            return p.expr
+        else:
+            return None
         
     @_('DURATIONFUNC expr RPAREN')
     def expr(self, p):
-        ''' Convert string to datetime.timedelta or float '''
+        ''' Convert a duration string to datetime.timedelta or float '''
         if not isinstance(p.expr, str):
             return None
         duration = p.expr
@@ -2381,6 +2467,8 @@ class SFeelParser(Parser):
         if duration[0] == '-':
             sign = -1
             duration = duration[1:]     # skip -
+        if duration[0] != 'P':
+            return None
         duration = duration[1:]         # skip P
         parts = duration.split('T')     # look for T (dayTimeDuration)
         if len(parts) == 1:             # no T - must be yearMonthDuration
@@ -2388,20 +2476,23 @@ class SFeelParser(Parser):
             parts = duration.split('Y')
             if len(parts) != 2:
                 return None
-            try:
-                months = int(parts[0]) * 12
-            except:
-                return None
-            duration = parts[1]
-            parts = duration.split('M')
-            if len(parts) != 2:
-                return None
-            if parts[1] != '':
-                return None
-            try:
-                months += int(parts[0])
-            except:
-                return None
+            if len(parts[0]) > 0:
+                try:
+                    months = int(parts[0]) * 12
+                except:
+                    return None
+            if len(parts[1]) > 0:
+                duration = parts[1]
+                parts = duration.split('M')
+                if len(parts) != 2:
+                    return None
+                if parts[1] != '':
+                    return None
+                if len(parts[0]) > 0:
+                    try:
+                        months += int(parts[0])
+                    except:
+                        return None
             if sign == 0:
                 return float(months)
             else:
@@ -2451,8 +2542,8 @@ class SFeelParser(Parser):
         
     @_('YEARSANDMONTHSDURATIONFUNC expr COMMA expr RPAREN')
     def expr(self, p):
-        ''' Convert datetime.timedelta betwen two dates (from, to) to float '''
-        if not isinstance(p.expr0, datetime.date):
+        ''' Convert difference betwen two dates (from, to) to 'months' as a float '''
+        if not isinstance(p.expr0, datetime.date):          # True for dates and datetimes
             return None
         if not isinstance(p.expr1, datetime.date):
             return None
@@ -2468,6 +2559,7 @@ class SFeelParser(Parser):
 
     @_('GETVALUEFUNC expr COMMA NAME RPAREN')
     def expr(self, p):
+        ''' Get a value from a Context by key '''
         if isinstance(p.expr, dict):
             if isinstance(p.NAME, str):
                 if p.NAME in p.expr:
@@ -2476,6 +2568,7 @@ class SFeelParser(Parser):
 
     @_('GETENTRIESFUNC expr RPAREN')
     def expr(self, p):
+        ''' Get a list of 'key','value' pairs from a context'''
         if isinstance(p.expr, dict):
             retList = []
             i = 0
@@ -2486,6 +2579,504 @@ class SFeelParser(Parser):
                 i += 1
             return retList
         return None
+
+    @_('ISFUNC expr COMMA expr RPAREN')
+    def expr(self, p):
+        ''' Test that two expressions are the same FEEL semantic domain'''
+        if type(p.expr0) != type(p.expr1):
+            return False
+        if (not isinstance(p.expr0, datetime.datetime)) and (not isinstance(p.expr0, datetime.time)):
+            return True
+        if p.expr0.tzinfo == p.expr1.tzinfo:
+            return True
+        if p.expr0.dst() == p.expr1.dst():
+            return True
+        return False
+
+    @_('BEFOREFUNC expr COMMA expr RPAREN')
+    def expr(self, p):
+        ''' Test point or range is before point or range'''
+        if isinstance(p.expr0, tuple):      # a range before
+            (lowEnd0, lowVal0, lowPoint, lowEnd) = p.expr0
+        else:           # a point before
+            lowEnd = ']'
+            lowPoint = p.expr0
+        if isinstance(p.expr1, tuple):     # before a range
+            (highEnd, highPoint, highVal1, highEnd1) = p.expr1
+        else:                               # a point before a point
+            highEnd = '['
+            highPoint = p.expr1
+        # Check lowPoint is 'before' highPoint
+        if isinstance(lowPoint, str) and not isinstance(highPoint, str):
+            return False
+        elif isinstance(lowPoint, float) and not isinstance(highPoint, float):
+            return False
+        elif isinstance(lowPoint, datetime.date) and not isinstance(highPoint, datetime.date):      # True for both dates and datetimes
+            return False
+        elif isinstance(lowPoint, datetime.timedelta) and not isinstance(highPoint, datetime.timedelta):
+            return False
+        if lowPoint < highPoint:
+            return True
+        if lowPoint > highPoint:
+            return False
+        if (lowEnd != ']') or (highEnd != '['):
+            return True
+        return False
+
+    @_('AFTERFUNC expr COMMA expr RPAREN')
+    def expr(self, p):
+        ''' Test point or range is after point or range'''
+        if isinstance(p.expr0, tuple):      # a range after
+            (highEnd, highPoint, highVal1, highEnd1) = p.expr0
+        else:           # a point before
+            highEnd = '['
+            highPoint = p.expr0
+        if isinstance(p.expr1, tuple):     # before a range
+            (lowEnd0, lowVal0, lowPoint, lowEnd) = p.expr1
+        else:                               # a point before a point
+            lowEnd = ']'
+            lowPoint = p.expr1
+        # Check lowPoint is 'before' highPoint
+        if isinstance(lowPoint, str) and not isinstance(highPoint, str):
+            return False
+        elif isinstance(lowPoint, float) and not isinstance(highPoint, float):
+            return False
+        elif isinstance(lowPoint, datetime.date) and not isinstance(highPoint, datetime.date):      # True for both dates and datetimes
+            return False
+        elif isinstance(lowPoint, datetime.timedelta) and not isinstance(highPoint, datetime.timedelta):
+            return False
+        if lowPoint < highPoint:
+            return True
+        if lowPoint > highPoint:
+            return False
+        if (lowEnd != ']') or (highEnd != '['):
+            return True
+        return False
+
+    @_('MEETSFUNC expr COMMA expr RPAREN')
+    def expr(self, p):
+        ''' Test range meets range'''
+        if isinstance(p.expr0, tuple):      # a range meets
+            (lowEnd0, lowVal0, highPoint, highEnd) = p.expr0
+        else:
+            return False
+        if isinstance(p.expr1, tuple):      # a range meets a range
+            (lowEnd, lowPoint, highVal1, highEnd1) = p.expr1
+        else:
+            return False
+        # Check highPoint matches lowPoint
+        if isinstance(highPoint, str) and not isinstance(lowPoint, str):
+            return False
+        elif isinstance(highPoint, float) and not isinstance(lowPoint, float):
+            return False
+        elif isinstance(highPoint, datetime.date) and not isinstance(lowPoint, datetime.date):      # True for both dates and datetimes
+            return False
+        elif isinstance(highPoint, datetime.timedelta) and not isinstance(lowPoint, datetime.timedelta):
+            return False
+        if (highPoint != lowPoint):
+            return False
+        if (highEnd != ']') or (lowEnd != '['):
+            return False
+        return True
+
+    @_('METBYFUNC expr COMMA expr RPAREN')
+    def expr(self, p):
+        ''' Test range meets range'''
+        if isinstance(p.expr0, tuple):      # a range meets
+            (lowEnd, lowPoint, highVal0, highEnd0) = p.expr0
+        else:
+            return False
+        if isinstance(p.expr1, tuple):      # a range meets a range
+            (lowEnd0, lowVal0, highPoint, highEnd) = p.expr1
+        else:
+            return False
+        # Check lowPoint matches highPoint
+        if isinstance(lowPoint, str) and not isinstance(highPoint, str):
+            return False
+        elif isinstance(lowPoint, float) and not isinstance(highPoint, float):
+            return False
+        elif isinstance(lowPoint, datetime.date) and not isinstance(highPoint, datetime.date):      # True for both dates and datetimes
+            return False
+        elif isinstance(lowPoint, datetime.timedelta) and not isinstance(highPoint, datetime.timedelta):
+            return False
+        if (lowPoint != highPoint):
+            return False
+        if (lowEnd != '[') or (highEnd != ']'):
+            return False
+        return True
+
+    @_('OVERLAPSFUNC expr COMMA expr RPAREN')
+    def expr(self, p):
+        ''' Test range overlaps range'''
+        if isinstance(p.expr0, tuple):      # a range overlaps
+            (end00, low0Val, high0Val, end01) = p.expr0
+        else:
+            return False
+        if isinstance(p.expr1, tuple):      # a range overlaps a range
+            (end10, low1Val, high1Val, end11) = p.expr1
+        else:
+            return False
+        if isinstance(low0Val, str):
+            if not isinstance(low1Val, str) or not isinstance(high1Val, str):
+                return False
+        elif isinstance(low0Val, float):
+            if not isinstance(low1Val, float) or not isinstance(high1Val, float):
+                return False
+        elif isinstance(low0Val, datetime.date):            # True for both dates and datetimes
+            if not isinstance(low1Val, datetime.date) or not isinstance(high1Val, datetime.date):
+                return False
+        elif isinstance(low0Val, datetime.timedelta):
+            if not isinstance(low1Val, datetime.timedelta) or not isinstance(high1Val, datetime.timedelta):
+                return False
+        # Check range p.expr0 overlaps range p.expr1
+        if low0Val < low1Val:       # range p.expr0 starts before the start of range p.expr1
+            if high0Val < low1Val:      # but doesn't get to range p.expr1 - doesn't overlap
+                return False
+            elif high0Val == low1Val:   # reaches, but does it overlap
+                if (end01 == ')') or (end10 == '('):    # One is a closed range
+                    return False
+                return True
+            return True     # reaches and overlaps
+        elif low0Val == low1Val:     # range p.expr0 and range p.expr1 start at the same point
+            # Deal with the bizzare case of empty ranges
+            if (low0Val == high0Val) and (end00 == '(') and (end01 == ')'):
+                return False
+            if (low1Val == high1Val) and (end10 == '(') and (end11 == ')'):
+                return False
+            return True
+        else:                       # range p.expr1 start before start of range p.expr0
+            if high1Val < low0Val:      # but doesn't get to range p.exp0 - doesn't overlap
+                return False
+            elif high1Val == low0Val:   # reaches, but does it overlap
+                if (end11 == ')') or (end00 == '('):    # One is a closed range
+                    return False
+                return True
+            return True     # reaches and overlaps
+
+    @_('OVERLAPSBEFOREFUNC expr COMMA expr RPAREN')
+    def expr(self, p):
+        ''' Test range p.expr0 starts before (does not start or coincide) and overlaps, but does not include, range p.expr1'''
+        if isinstance(p.expr0, tuple):      # a range overlaps
+            (end00, low0Val, high0Val, end01) = p.expr0
+        else:
+            return False
+        if isinstance(p.expr1, tuple):      # a range overlaps a range
+            (end10, low1Val, high1Val, end11) = p.expr1
+        else:
+            return False
+        if isinstance(low0Val, str):
+            if not isinstance(low1Val, str):
+                return False
+        elif isinstance(low0Val, float):
+            if not isinstance(low1Val, float):
+                return False
+        elif isinstance(low0Val, datetime.date):            # True for both dates and datetimes
+            if not isinstance(low1Val, datetime.date):
+                return False
+        elif isinstance(low0Val, datetime.timedelta):
+            if not isinstance(low1Val, datetime.timedelta):
+                return False
+        # Check range p.expr0 starts before and overlaps range p.expr1
+        if low0Val > low1Val:       # range p.expr0 starts after the start of range p.expr1
+            return False
+        if low0Val == low1Val:     # range p.expr0 and range p.expr1 start at the same point
+            if (end00 != '[') or (end10 != '('):          # make sure we have 'starts before'
+                return False
+        if high0Val < low1Val:      # range p.expr0 doesn't get to range p.expr1 - doesn't overlap
+                return False
+        if high0Val == low1Val:   # reaches, but does it overlap
+            if (end01 == ')') or (end10 == '('):    # One is a closed range
+                return False
+        if high0Val > high1Val:     # includes - which isn't overlaps
+            return False
+        if high0Val == high1Val:    # range p.expr0 and range p.expr1 end at the same point
+            if (end01 == ']') and (end11 == ')'):        # includes - which isn't overlaps
+                return False
+        return True 
+
+    @_('OVERLAPSAFTERFUNC expr COMMA expr RPAREN')
+    def expr(self, p):
+        ''' Test range p.expr0 starts after and overlaps range p.expr1'''
+        if isinstance(p.expr0, tuple):      # a range overlaps
+            (end00, low0Val, high0Val, end01) = p.expr0
+        else:
+            return False
+        if isinstance(p.expr1, tuple):      # a range overlaps a range
+            (end10, low1Val, high1Val, end11) = p.expr1
+        else:
+            return False
+        if isinstance(low0Val, str):
+            if not isinstance(low1Val, str) or not isinstance(high1Val, str):
+                return False
+        elif isinstance(low0Val, float):
+            if not isinstance(low1Val, float) or not isinstance(high1Val, float):
+                return False
+        elif isinstance(low0Val, datetime.date):            # True for both dates and datetimes
+            if not isinstance(low1Val, datetime.date) or not isinstance(high1Val, datetime.date):
+                return False
+        elif isinstance(low0Val, datetime.timedelta):
+            if not isinstance(low1Val, datetime.timedelta) or not isinstance(high1Val, datetime.timedelta):
+                return False
+        # Check range p.expr0 starts after and overlaps range p.expr1
+        if low0Val < low1Val:       # range p.expr0 starts before the start of range p.expr1
+            return False
+        if low0Val == low1Val:     # range p.expr0 and range p.expr1 start at the same point
+            if (end00 != '(') or (end10 != '['):    # Make sure we have 'starts after'
+                return False
+        if low0Val > high1Val:      # range p.expr0 doesn't stretch back to range p.exp1 - doesn't overlap
+            return False
+        if low0Val == high1Val:   # p.expr0 stretches back to p.expr1, but does it overlap
+            if (end00 == '(') or (end11 == ')'):    # One is a closed range
+                return False
+        if high0Val == high1Val:    # range p.expr0 and range p.expr1 end at the same point
+            if (end01 == ')') or (end11 == ']'):        # make sure there is some overlap 'after' the end
+                return False
+        return True     # reaches and overlaps
+        
+    @_('FINISHESFUNC expr COMMA expr RPAREN')
+    def expr(self, p):
+        ''' Test point or range finishes a range'''
+        if isinstance(p.expr0, tuple):      # a range finishes
+            (lowEnd0, lowVal0, highPoint, highEnd) = p.expr0
+        else:           # a point finishes
+            highEnd = ']'
+            highPoint = p.expr0
+        if isinstance(p.expr1, tuple):     # a range
+            (lowEnd1, lowVal1, thePoint, theEnd) = p.expr1
+        else:
+            return False
+        # Check highPoint is thePoint
+        if isinstance(thePoint, str) and not isinstance(highPoint, str):
+            return False
+        elif isinstance(thePoint, float) and not isinstance(highPoint, float):
+            return False
+        elif isinstance(thePoint, datetime.date) and not isinstance(highPoint, datetime.date):      # True for both dates and datetimes
+            return False
+        elif isinstance(thePoint, datetime.timedelta) and not isinstance(highPoint, datetime.timedelta):
+            return False
+        if thePoint != highPoint:
+            return False
+        if highEnd != theEnd:
+            return False
+        return True
+
+    @_('FINISHEDBYFUNC expr COMMA expr RPAREN')
+    def expr(self, p):
+        ''' Test a range is finished by point or range'''
+        if isinstance(p.expr0, tuple):      # a range
+            (lowEnd0, lowVal0, highPoint, highEnd) = p.expr0
+        else:
+            return False
+        if isinstance(p.expr1, tuple):     # before a range
+            (highEnd1, highVal1, thePoint, theEnd) = p.expr1
+        else:                               # a point before a point
+            theEnd = ']'
+            thePoint = p.expr1
+        # Check thePoint is highPoint
+        if isinstance(thePoint, str) and not isinstance(highPoint, str):
+            return False
+        elif isinstance(thePoint, float) and not isinstance(highPoint, float):
+            return False
+        elif isinstance(thePoint, datetime.date) and not isinstance(highPoint, datetime.date):      # True for both dates and datetimes
+            return False
+        elif isinstance(thePoint, datetime.timedelta) and not isinstance(highPoint, datetime.timedelta):
+            return False
+        if thePoint != highPoint:
+            return False
+        if theEnd != highEnd:
+            return False
+        return True
+
+    @_('INCLUDESFUNC expr COMMA expr RPAREN')
+    def expr(self, p):
+        ''' Test range includes point or range'''
+        if isinstance(p.expr0, tuple):      # a range before
+            (lowEnd0, lowVal0, highVal0, highEnd0) = p.expr0
+        else:
+            return False
+        if isinstance(p.expr1, tuple):     # before a range
+            (lowEnd1, lowVal1, highVal1, highEnd1) = p.expr1
+        else:                               # includes a point
+            lowEnd1 = '['
+            highEnd1 = ']'
+            lowVal1 = highVal1 = p.expr1
+        # Check lowVal0..highVal0 include lowVa1..highVal1
+        if isinstance(lowVal0, str) and not isinstance(highVal0, str):
+            return False
+        elif isinstance(lowVal0, float) and not isinstance(highVal0, float):
+            return False
+        elif isinstance(lowVal0, datetime.date) and not isinstance(highVal0, datetime.date):      # True for both dates and datetimes
+            return False
+        elif isinstance(lowVal0, datetime.timedelta) and not isinstance(highVal0, datetime.timedelta):
+            return False
+        if lowVal0 > lowVal1:       # p.expr1 starts before p.expr0
+            return False
+        if lowVal0 == lowVal1:      # Same starting point
+            if (lowEnd0 != lowEnd1) and (lowEnd0 == '('):        # p.expr0 is closed
+                return False
+        if highVal0 < highVal1:     # p.expr1 ends after p.expr0
+            return False
+        if highVal0 == highVal1:
+            if (highEnd0 != highEnd1) and (highEnd0 == ')'):    # p.expr0 is closed
+                return False
+        return True
+
+    @_('DURINGFUNC expr COMMA expr RPAREN')
+    def expr(self, p):
+        ''' Test point or range p.expr0 is included in range p.expr1'''
+        if isinstance(p.expr0, tuple):      # a range before
+            (lowEnd0, lowVal0, highVal0, highEnd0) = p.expr0
+        else:           # a point before
+            lowEnd0 = '['
+            highEnd0 = ']'
+            lowVal0 = highVal0 = p.expr0
+        if isinstance(p.expr1, tuple):     # before a range
+            (lowEnd1, lowVal1, highVal1, highEnd1) = p.expr1
+        else:
+            return False                               # a point before a point
+        # Check highVal0..highVal1 includes lowVal0..lowVal1
+        if isinstance(lowVal0, str) and not isinstance(lowVal1, str):
+            return False
+        elif isinstance(lowVal0, float) and not isinstance(lowVal1, float):
+            return False
+        elif isinstance(lowVal0, datetime.date) and not isinstance(lowVal1, datetime.date):      # True for both dates and datetimes
+            return False
+        elif isinstance(lowVal0, datetime.timedelta) and not isinstance(lowVal1, datetime.timedelta):
+            return False
+        if lowVal0 < lowVal1:       # p.expr0 start before p.expr1
+            return False
+        if lowVal0 == lowVal1:
+            if (lowEnd0 != lowEnd1) and (lowEnd1 == '('):            # p.expr1 is closed
+                return False
+        if highVal0 > highVal1:     # p.expr0 ends after p.expr1
+            return False
+        if (highVal0 == highVal1):
+            if (highEnd0 != highEnd1) and (highEnd1 == ')'):        # p.expr1 is closed
+                return False
+        return True
+
+    @_('STARTSFUNC expr COMMA expr RPAREN')
+    def expr(self, p):
+        ''' Test point or range starts a range'''
+        if isinstance(p.expr0, tuple):      # a range before
+            (lowEnd0, lowVal0, highVal0, highEnd0) = p.expr0
+        else:           # a point before
+            lowEnd0 = '['
+            highEnd0 = ']'
+            lowVal0 = highVal0 = p.expr0
+        if isinstance(p.expr1, tuple):     # before a range
+            (lowEnd1, lowVal1, highVal1, highEnd1) = p.expr1
+        else:
+            return False
+        # Check lowVal0..highVal0 starts lowVal1..highVal1, but doesn't go beyond
+        if isinstance(lowVal0, str) and not isinstance(lowVal1, str):
+            return False
+        elif isinstance(lowVal0, float) and not isinstance(lowVal1, float):
+            return False
+        elif isinstance(lowVal0, datetime.date) and not isinstance(lowVal1, datetime.date):      # True for both dates and datetimes
+            return False
+        elif isinstance(lowVal0, datetime.timedelta) and not isinstance(lowVal1, datetime.timedelta):
+            return False
+        if lowVal0 != lowVal1:
+            return False
+        if lowEnd0 != lowEnd1:
+            return False
+        if highVal0 > highVal1:
+            return False
+        if highVal0 == highVal1:
+            if (highEnd0 != highEnd1) and (highEnd1 == ')'):
+                return False
+        return True
+
+    @_('STARTEDBYFUNC expr COMMA expr RPAREN')
+    def expr(self, p):
+        ''' Test range is started by point or range'''
+        if isinstance(p.expr0, tuple):      # a range before
+            (lowEnd0, lowVal0, highVal0, highEnd0) = p.expr0
+        else:
+            return False
+        if isinstance(p.expr1, tuple):     # before a range
+            (lowEnd1, lowVal1, highVal1, highEnd1) = p.expr1
+        else:                               # a point before a point
+            lowEnd1 = '['
+            highEnd1 = ']'
+            lowVal1 = highVal1 = p.expr1
+        # Check lowVal0..highVal0 is started by lowVal1..highVal1, but doesn't go beyond
+        if isinstance(lowVal0, str) and not isinstance(lowVal1, str):
+            return False
+        elif isinstance(lowVal0, float) and not isinstance(lowVal1, float):
+            return False
+        elif isinstance(lowVal0, datetime.date) and not isinstance(lowVal1, datetime.date):      # True for both dates and datetimes
+            return False
+        elif isinstance(lowVal0, datetime.timedelta) and not isinstance(lowVal1, datetime.timedelta):
+            return False
+        if lowVal1 != lowVal0:
+            return False
+        if lowEnd1 != lowEnd0:
+            return False
+        if highVal1 > highVal0:
+            return False
+        if highVal1 == highVal0:
+            if (highEnd1 != highEnd0) and (highEnd0 == ')'):
+                return False
+        return True
+
+    @_('COINCIDESFUNC expr COMMA expr RPAREN')
+    def expr(self, p):
+        ''' Test point or range is coincides with point or range'''
+        if not isinstance(p.expr0, tuple):      # a point
+            if isinstance(p.expr1, tuple):
+                return False
+            return p.expr0 == p.expr1
+        (lowEnd0, lowVal0, highVal0, highEnd0) = p.expr0
+        if not isinstance(p.expr1, tuple):     # not a range
+            return False
+        (lowEnd1, lowVal1, highVal1, highEnd1) = p.expr1
+        # Check range p.expr0 coincides with range p.expr1
+        if isinstance(lowVal0, str) and not isinstance(lowVal1, str):
+            return False
+        elif isinstance(lowVal0, float) and not isinstance(lowVal1, float):
+            return False
+        elif isinstance(lowVal0, datetime.date) and not isinstance(lowVal1, datetime.date):      # True for both dates and datetimes
+            return False
+        elif isinstance(lowVal0, datetime.timedelta) and not isinstance(lowVal1, datetime.timedelta):
+            return False
+        if lowVal0 != lowVal1:
+            return False
+        if highVal0 != highVal1:
+            return False
+        if lowEnd0 != lowEnd1:
+            return False
+        if highEnd0 != highEnd1:
+            return False
+        return True
+
+    @_('DAYOFYEARFUNC expr RPAREN')
+    def expr(self, p):
+        if isinstance(p.expr, datetime.date):
+            return p.expr.timetuple().tm_yday
+        return False
+
+    @_('DAYOFWEEKFUNC expr RPAREN')
+    def expr(self, p):
+        days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        if isinstance(p.expr, datetime.date):
+            return days[p.expr.weekday()]
+        return False
+
+    @_('MONTHOFYEARFUNC expr RPAREN')
+    def expr(self, p):
+        months = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+        if isinstance(p.expr, datetime.date):
+            return months[p.expr.month]
+        return False
+
+    @_('WEEKOFYEARFUNC expr RPAREN')
+    def expr(self, p):
+        if isinstance(p.expr, datetime.date):
+            (year, week, weekday) = p.expr.isocalendar()
+            return week
+        return False
 
     @_('BOOLEAN')
     def expr(self, p):
@@ -2538,27 +3129,54 @@ class SFeelParser(Parser):
         if duration[0] == '-':
             sign = -1
             duration = duration[1:]     # skip -
+        if duration[0] != 'P':
+            return None
         duration = duration[1:]         # skip P
         days = seconds = milliseconds = 0
         if duration[0] != 'T':          # days is optional
             parts = duration.split('D')
             if len(parts) == 2:
-                days = int(parts[0])
+                if len(parts[0]) > 0:
+                    try:
+                        days = int(parts[0])
+                    except:
+                        return None
+                if len(parts[1]) == 0:
+                    if sign == 0:
+                        return datetime.timedelta(days=days, seconds=seconds, milliseconds=milliseconds)
+                    else:
+                        return -datetime.timedelta(days=days, seconds=seconds, milliseconds=milliseconds)
                 duration = parts[1]
+            else:
+                return None
+        if duration[0] != 'T':
+            return None
         duration = duration[1:]         # Skip T
         parts = duration.split('H')
         if len(parts) == 2:
-            seconds = int(parts[0]) * 60 * 60
+            if len(parts[0]) > 0:
+                try:
+                    seconds = int(parts[0]) * 60 * 60
+                except:
+                    return None
             duration = parts[1]
         parts = duration.split('M')
         if len(parts) == 2:
-            seconds += int(parts[0]) * 60
+            if len(parts[0]) > 0:
+                try:
+                    seconds += int(parts[0]) * 60
+                except:
+                    return None
             duration = parts[1]
         parts = duration.split('S')
         if len(parts) == 2:
-            sPart = float(parts[0])
-            seconds += int(sPart)
-            milliseconds = int((sPart * 1000)) % 1000
+            if len(parts[0]) > 0:
+                try:
+                    sPart = float(parts[0])
+                    seconds += int(sPart)
+                    milliseconds = int((sPart * 1000)) % 1000
+                except:
+                    return None
         if sign == 0:
             return datetime.timedelta(days=days, seconds=seconds, milliseconds=milliseconds)
         else:
@@ -2572,25 +3190,29 @@ class SFeelParser(Parser):
         if duration[0] == '-':
             sign = -1
             duration = duration[1:]     # skip -
+        if duration[0] != 'P':
+            return None
         duration = duration[1:]         # skip P
         months = 0
         parts = duration.split('Y')
         if len(parts) != 2:
             return None
-        try:
-            months = int(parts[0]) * 12
-        except:
-            return None
+        if len(parts[0]) > 0:
+            try:
+                months = int(parts[0]) * 12
+            except:
+                return None
         duration = parts[1]
         parts = duration.split('M')
         if len(parts) != 2:
             return None
         if parts[1] != '':
             return None
-        try:
-            months += int(parts[0])
-        except:
-            return None
+        if len(parts[0]) > 0:
+            try:
+                months += int(parts[0])
+            except:
+                return None
         if sign == 0:
             return float(months)
         else:

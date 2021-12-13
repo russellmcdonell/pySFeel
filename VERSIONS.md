@@ -1,3 +1,7 @@
+### 1.3.1 - Added DMN 1.3 functions
+* Fixed bug in string(duration)
+* Fixed bugs in date and duration arithmatic
+* Fixed bug in floor and ceil functions
 ### 1.2.1 - Fixed bug in in() function
 ### 1.2.0 - First candidate for a production release
 * fixed addition and subtraction of durations

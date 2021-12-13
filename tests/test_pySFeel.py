@@ -568,7 +568,7 @@ class TestClass:
         SFeel = 'date and time(date("2012-12-31"), time("11:00:00Z"))'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == datetime.datetime(year=2012, month=12, day=31, hour=11, minute=0, second=0)
+        assert retval == datetime.datetime(year=2012, month=12, day=31, hour=11, minute=0, second=0, tzinfo=datetime.timezone.utc)
 
     def test_dateandtime2(self):
         SFeel = 'date and time("2012-12-31T11:00:00Z")'
@@ -695,6 +695,48 @@ class TestClass:
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
         assert retval == None
+
+    def test_string1(self):
+        SFeel = 'string(null)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 'null'
+
+    def test_string2(self):
+        SFeel = 'string(true)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_string2(self):
+        SFeel = 'string(false)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 'false'
+
+    def test_string3(self):
+        SFeel = 'string(1.1)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == '1.1'
+
+    def test_string4(self):
+        SFeel = 'string("Fred")'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 'Fred'
+
+    def test_string5(self):
+        SFeel = 'string(date and time("2012-12-31T11:00:00Z"))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == '2012-12-31T11:00:00+00:00'
+
+    def test_string6(self):
+        SFeel = 'string(P2D)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 'P2DT0H0M0S'
 
     def test_substring1(self):
         SFeel = 'substring("foobar", 3)'
@@ -1349,3 +1391,891 @@ class TestClass:
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
         assert retval == [[1, 2]]
+
+    def test_is1(self):
+        SFeel = 'is(date("2012-12-25"), time("23:00:50"))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_is2(self):
+        SFeel = 'is(date("2012-12-25"), date("2012-12-25"))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_is3(self):
+        SFeel = 'is(time("23:00:50z"), time("23:00:50"))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_is4(self):
+        SFeel = 'is("string1", "string2")'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_is5(self):
+        SFeel = 'is(7, 9.0)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_is6(self):
+        SFeel = 'is(P2Y1M, P0Y2M)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_is7(self):
+        SFeel = 'is(P1DT2H, P2DT3H5S)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_before1(self):
+        SFeel = 'before(1, 10)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_before2(self):
+        SFeel = 'before(10, 1)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_before3(self):
+        SFeel = 'before(1, [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_before5(self):
+        SFeel = 'before(1, (1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_before6(self):
+        SFeel = 'before(1, [5 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_before7(self):
+        SFeel = 'before([1 .. 10], 10)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_before8(self):
+        SFeel = 'before([1 .. 10), 10)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_before9(self):
+        SFeel = 'before([1 .. 10], 15)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_before10(self):
+        SFeel = 'before([1 .. 10], [15 .. 20])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_before11(self):
+        SFeel = 'before([1 .. 10], [10 .. 20])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_before12(self):
+        SFeel = 'before([1 .. 10), [10 .. 20])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_before13(self):
+        SFeel = 'before([1 .. 10], (10 .. 20])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_after1(self):
+        SFeel = 'after(10, 5)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_after2(self):
+        SFeel = 'after(5, 10)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_after3(self):
+        SFeel = 'after(12, [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_after5(self):
+        SFeel = 'after(10, [1 .. 10))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_after6(self):
+        SFeel = 'after(10, [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_after7(self):
+        SFeel = 'after([11 .. 20], 12)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_after8(self):
+        SFeel = 'after([11 .. 20), 10)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_after9(self):
+        SFeel = 'after((11 .. 20], 11)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_after10(self):
+        SFeel = 'after([11 .. 0], 11)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_after11(self):
+        SFeel = 'after([11 .. 20], [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_after12(self):
+        SFeel = 'after([1 .. 10], [11 .. 20])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_after14(self):
+        SFeel = 'after([11 .. 20], [1.. 11))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_after15(self):
+        SFeel = 'after((11 .. 20], [1 .. 11])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_meets1(self):
+        SFeel = 'meets([1 .. 5], [5 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_meets2(self):
+        SFeel = 'meets([1 .. 5), [5 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_meets3(self):
+        SFeel = 'meets([1 .. 5], (5 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_meets4(self):
+        SFeel = 'meets([1 .. 5], [6 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_metby1(self):
+        SFeel = 'met by([5 .. 10], [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_metby2(self):
+        SFeel = 'met by([5 .. 10], [1 .. 5))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_metby3(self):
+        SFeel = 'met by((5 .. 10], [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_metby4(self):
+        SFeel = 'met by([6 .. 10], [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlaps1(self):
+        SFeel = 'overlaps([1 .. 5], [3 .. 8])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_overlaps2(self):
+        SFeel = 'overlaps([3 .. 8], [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_overlaps3(self):
+        SFeel = 'overlaps([1 .. 8], [3 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_overlaps4(self):
+        SFeel = 'overlaps([3 .. 5], [1 .. 8])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_overlaps5(self):
+        SFeel = 'overlaps([1 .. 5], [6 .. 8])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlaps6(self):
+        SFeel = 'overlaps([6 .. 8], [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlaps7(self):
+        SFeel = 'overlaps([1 .. 5], [5 .. 8])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_overlaps8(self):
+        SFeel = 'overlaps([1 .. 5], (5 .. 8])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlaps9(self):
+        SFeel = 'overlaps([1 .. 5), [5 .. 8])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlaps10(self):
+        SFeel = 'overlaps([1 .. 5), (5 .. 8])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlaps11(self):
+        SFeel = 'overlaps([5 .. 8], [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_overlaps12(self):
+        SFeel = 'overlaps((5 .. 8], [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlap13(self):
+        SFeel = 'overlaps([5 .. 8], [1 .. 5))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlaps14(self):
+        SFeel = 'overlaps((5 .. 8], [1 .. 5))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlapsbefore1(self):
+        SFeel = 'overlaps before([1 .. 5], [3 .. 8])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_overlapsbefore2(self):
+        SFeel = 'overlaps before([1 .. 5], [6 .. 8])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlapsbefore3(self):
+        SFeel = 'overlaps before([1 .. 5], [5 .. 8])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_overlapsbefore4(self):
+        SFeel = 'overlaps before([1 .. 5], (5 .. 8])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlapsbefore5(self):
+        SFeel = 'overlaps before([1 .. 5), [5 .. 8])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlapsbefore6(self):
+        SFeel = 'overlaps before([1 .. 5), (1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_overlapsbefore7(self):
+        SFeel = 'overlaps before([1 .. 5], (1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_overlapsbefore8(self):
+        SFeel = 'overlaps before([1 .. 5), [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlapsbefore9(self):
+        SFeel = 'overlaps before([1 .. 5], [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlapsafter1(self):
+        SFeel = 'overlaps after([3 .. 8], [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_overlapsafter2(self):
+        SFeel = 'overlaps after([6 .. 8], [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlapsafter3(self):
+        SFeel = 'overlaps after([5 .. 8], [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_overlapsafter4(self):
+        SFeel = 'overlaps after((5 .. 8], [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlapsafter5(self):
+        SFeel = 'overlaps after([5 .. 8], [1 .. 5))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlapsafter6(self):
+        SFeel = 'overlaps after((1 .. 5], [1 .. 5))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_overlapsafter7(self):
+        SFeel = 'overlaps after((1 .. 5], [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlapsafter8(self):
+        SFeel = 'overlaps after([1 .. 5], [1 .. 5))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_overlapsafter9(self):
+        SFeel = 'overlaps after([1 .. 5], [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_finishes1(self):
+        SFeel = 'finishes(10, [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_finishes2(self):
+        SFeel = 'finishes(10, [1 .. 10))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_finishes3(self):
+        SFeel = 'finishes([5 .. 10], [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_finishes4(self):
+        SFeel = 'finishes([5 .. 10), [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_finishes5(self):
+        SFeel = 'finishes([5 .. 10), [1 .. 10))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_finishes6(self):
+        SFeel = 'finishes((1 .. 10], [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_finishes7(self):
+        SFeel = 'finishes((1 .. 10], [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_finishedby1(self):
+        SFeel = 'finished by([1 .. 10], 10)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_finishedby2(self):
+        SFeel = 'finished by([1 .. 10), 10)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_finishedby3(self):
+        SFeel = 'finished by([1 .. 10], [5 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_finishedby4(self):
+        SFeel = 'finished by([1 .. 10], [5 .. 10))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_finishedby5(self):
+        SFeel = 'finished by([1 .. 10), [1 .. 10))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_finishedby6(self):
+        SFeel = 'finished by([1 .. 10], [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_finishedby7(self):
+        SFeel = 'finished by([1 .. 10], (1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_includes1(self):
+        SFeel = 'includes([1 .. 10], 5)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_includes2(self):
+        SFeel = 'includes([1 .. 10], 12)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == False
+
+    def test_includes3(self):
+        SFeel = 'includes([1 .. 10], 1)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_includes4(self):
+        SFeel = 'includes([1 .. 10], 10)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_includes5(self):
+        SFeel = 'includes((1 .. 10], 1)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == False
+
+    def test_includes6(self):
+        SFeel = 'includes([1 .. 10), 10)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == False
+
+    def test_includes7(self):
+        SFeel = 'includes([1 .. 10], [4 .. 6])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_includes8(self):
+        SFeel = 'includes([1 .. 10], [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_includes9(self):
+        SFeel = 'includes((1 .. 10], (1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_includes10(self):
+        SFeel = 'includes([1 .. 10], (1 .. 10))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_includes11(self):
+        SFeel = 'includes([1 .. 10), [5 .. 10))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_includes12(self):
+        SFeel = 'includes([1 .. 10], [1 .. 10))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_includes13(self):
+        SFeel = 'includes([1 .. 10], (1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_includes14(self):
+        SFeel = 'includes([1 .. 10], [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_during1(self):
+        SFeel = 'during(5, [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_during2(self):
+        SFeel = 'during(12, [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == False
+
+    def test_during3(self):
+        SFeel = 'during(1, [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_during4(self):
+        SFeel = 'during(10, [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_during5(self):
+        SFeel = 'during(1, (1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == False
+
+    def test_during6(self):
+        SFeel = 'during(10, [1 .. 10))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == False
+
+    def test_during7(self):
+        SFeel = 'during([4 .. 6], [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_during8(self):
+        SFeel = 'during([1 .. 5], [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_during9(self):
+        SFeel = 'during((1 .. 5], (1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_during10(self):
+        SFeel = 'during((1 .. 10), [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_during11(self):
+        SFeel = 'during([5 .. 10), [1 .. 10))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_during12(self):
+        SFeel = 'during([1 .. 10), [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_during13(self):
+        SFeel = 'during((1 .. 10], [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_during14(self):
+        SFeel = 'during([1 .. 10], [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errrors' not in status
+        assert retval == True
+
+    def test_starts1(self):
+        SFeel = 'starts(1, [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_starts2(self):
+        SFeel = 'starts(1, (1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_starts3(self):
+        SFeel = 'starts(2, [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_starts4(self):
+        SFeel = 'starts([1 .. 5], [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_starts5(self):
+        SFeel = 'starts((1 .. 5], (1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_starts6(self):
+        SFeel = 'starts((1 .. 5], [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_starts7(self):
+        SFeel = 'starts([1 .. 5], (1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_starts8(self):
+        SFeel = 'starts([1 .. 10], [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_starts9(self):
+        SFeel = 'starts([1 .. 10), [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_starts10(self):
+        SFeel = 'starts((1 .. 10), (1 .. 10))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_startedby1(self):
+        SFeel = 'started by([1 .. 10], 1)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_startedby2(self):
+        SFeel = 'started by((1 .. 10], 1)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_startsedby3(self):
+        SFeel = 'started by([1 .. 10], 2)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_startedby4(self):
+        SFeel = 'started by([1 .. 10], [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_startedby5(self):
+        SFeel = 'started by((1 .. 10], (1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_startedby6(self):
+        SFeel = 'started by([1 .. 10], (1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_startedby7(self):
+        SFeel = 'started by((1 .. 10], [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_startedby8(self):
+        SFeel = 'started by([1 .. 10], [1 .. 10])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_startedby9(self):
+        SFeel = 'started by([1 .. 10], [1 .. 10))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_startedby10(self):
+        SFeel = 'started by((1 .. 10), (1 .. 10))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_coincides1(self):
+        SFeel = 'coincides(5, 5)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_coincides2(self):
+        SFeel = 'coincides(3, 4)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_coincides3(self):
+        SFeel = 'coincides([1 .. 5], [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_coincides4(self):
+        SFeel = 'coincides((1 .. 5), [1 .. 5])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_coincides5(self):
+        SFeel = 'coincides([1 .. 5], [2 .. 6])'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
+    def test_dayofyear(self):
+        SFeel = 'day of year(date(2019, 9, 17))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 260
+
+    def test_dayofweek(self):
+        SFeel = 'day of week(date(2019, 9, 17))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 'Tuesday'
+        
+    def test_monthofyear(self):
+        SFeel = 'month of year(date(2019, 9, 17))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 'September'
+        
+    def test_weekofyear1(self):
+        SFeel = 'week of year(date(2019, 9, 17))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 38
+        
+    def test_weekofyear2(self):
+        SFeel = 'week of year(date(2003, 12, 29))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 1
+        
+    def test_weekofyear3(self):
+        SFeel = 'week of year(date(2004, 1, 4))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 1
+        
+    def test_weekofyear4(self):
+        SFeel = 'week of year(date(2005, 1, 1))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 53
+        
+    def test_weekofyear5(self):
+        SFeel = 'week of year(date(2005, 1, 3))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 1
+        
+    def test_weekofyear6(self):
+        SFeel = 'week of year(date(2005, 1, 9))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 1
