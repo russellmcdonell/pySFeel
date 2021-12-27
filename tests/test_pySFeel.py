@@ -1,4 +1,3 @@
-from sys import float_repr_style
 from sly.yacc import ERROR_COUNT
 import datetime
 import pySFeel
@@ -1434,6 +1433,12 @@ class TestClass:
         assert 'errors' not in status
         assert retval == True
 
+    def test_is8(self):
+        SFeel = 'is(P2Y1M, 25)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == False
+
     def test_before1(self):
         SFeel = 'before(1, 10)'
         (status, retval) = parser.sFeelParse(SFeel)
@@ -2279,3 +2284,4 @@ class TestClass:
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
         assert retval == 1
+

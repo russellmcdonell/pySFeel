@@ -4,10 +4,11 @@
 
 from enum import IntFlag
 from os import truncate
+from typing import KeysView, ValuesView
 from sly import Lexer, Parser
 import re
 import datetime
-import dateutil.parser
+import dateutil.parser, dateutil.tz
 import math
 import statistics
 
@@ -30,6 +31,7 @@ class SFeelLexer(Lexer):
               BEFOREFUNC, AFTERFUNC, MEETSFUNC, METBYFUNC, OVERLAPSFUNC, OVERLAPSBEFOREFUNC, OVERLAPSAFTERFUNC,
               FINISHESFUNC, FINISHEDBYFUNC, INCLUDESFUNC, DURINGFUNC, STARTSFUNC, STARTEDBYFUNC, COINCIDESFUNC,
               DAYOFYEARFUNC, DAYOFWEEKFUNC, MONTHOFYEARFUNC, WEEKOFYEARFUNC,
+              STARTINCLUDED, ENDINCLUDED, TIMEOFFSET,
               NAME, STRING, NULL,
               LBRACKET, RBRACKET,
               EQUALS, NOTEQUALS, LTTHANEQUAL, GTTHANEQUAL, LTTHAN, GTTHAN,
@@ -130,6 +132,9 @@ class SFeelLexer(Lexer):
     WEEKOFYEARFUNC = r'week of year\('
     DTDURATION = r'-?P((([0-9]+D)(T(([0-9]+H)([0-9]+M)?([0-9]+(\.[0-9]+)?S)?|([0-9]+M)([0-9]+(\.[0-9]+)?S)?|([0-9]+(\.[0-9]+)?S)))?)|(T(([0-9]+H)([0-9]+M)?([0-9]+(\.[0-9]+)?S)?|([0-9]+M)([0-9]+(\.[0-9]+)?S)?|([0-9]+(\.[0-9]+)?S))))'
     YMDURATION = r'-?P[0-9]+Y[0-9]+M'
+    STARTINCLUDED = r'\bstart included\b'
+    ENDINCLUDED = r'\bend included\b'
+    TIMEOFFSET = r'\btime offset\b'
     NAME = (u'[?A-Z_a-z' +
             u'\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u02FF' +
             u'\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF' +
@@ -251,6 +256,9 @@ class SFeelParser(Parser):
             if isinstance(p.expr0, str):
                 if not isinstance(lowVal, str) or not isinstance(highVal, str):
                     return False
+            elif isinstance(p.expr0, int):              # Year, month durations
+                if not isinstance(lowVal, int) or not isinstance(highVal, int):
+                    return False
             elif isinstance(p.expr0, float):
                 if not isinstance(lowVal, float) or not isinstance(highVal, float):
                     return False
@@ -281,6 +289,9 @@ class SFeelParser(Parser):
                     if isinstance(p.expr0, str):
                         if not isinstance(lowVal, str) or not isinstance(highVal, str):
                             continue
+                    elif isinstance(p.expr0, int):              # Year, month durations
+                        if not isinstance(lowVal, int) or not isinstance(highVal, int):
+                            continue
                     elif isinstance(p.expr0, float):
                         if not isinstance(lowVal, float) or not isinstance(highVal, float):
                             continue
@@ -309,6 +320,8 @@ class SFeelParser(Parser):
             return False
         elif isinstance(p.expr0, str) and isinstance(p.expr1, str):
              return p.expr0 == p.expr1
+        elif isinstance(p.expr0, int) and isinstance(p.expr1, int):             # Year, month durations
+            return p.expr0 == p.expr1
         elif isinstance(p.expr0, float) and isinstance(p.expr1, float):
             return p.expr0 == p.expr1
         elif isinstance(p.expr0, datetime.date) and isinstance(p.expr1, datetime.date):         # True for both dates and datetimes
@@ -320,12 +333,13 @@ class SFeelParser(Parser):
         else:
             return None
 
-
     @_('expr IN LTTHAN expr')
     def expr(self, p):
         # 'in <' as an alternative to '<'
         # Grammer Rule 49.c
         if isinstance(p.expr0, str) and isinstance(p.expr1, str):
+            return p.expr0 < p.expr1
+        elif isinstance(p.expr0, int) and isinstance(p.expr1, int):             # Year, month durations
             return p.expr0 < p.expr1
         elif isinstance(p.expr0, float) and isinstance(p.expr1, float):
             return p.expr0 < p.expr1
@@ -344,6 +358,8 @@ class SFeelParser(Parser):
         # Grammer Rule 49.c
         if isinstance(p.expr0, str) and isinstance(p.expr1, str):
             return p.expr0 > p.expr1
+        elif isinstance(p.expr0, int) and isinstance(p.expr1, int):             # Year, month durations
+            return p.expr0 > p.expr1
         elif isinstance(p.expr0, float) and isinstance(p.expr1, float):
             return p.expr0 > p.expr1
         elif isinstance(p.expr0, datetime.date) and isinstance(p.expr1, datetime.date):         # True for both dates and datetimes
@@ -361,6 +377,8 @@ class SFeelParser(Parser):
         # Grammer Rule 49.c
         if isinstance(p.expr0, str) and isinstance(p.expr1, str):
             return p.expr0 <= p.expr1
+        elif isinstance(p.expr0, int) and isinstance(p.expr1, int):             # Year, month durations
+            return p.expr0 <= p.expr1
         elif isinstance(p.expr0, float) and isinstance(p.expr1, float):
             return p.expr0 <= p.expr1
         elif isinstance(p.expr0, datetime.date) and isinstance(p.expr1, datetime.date):         # True for both dates and datetimes
@@ -377,6 +395,8 @@ class SFeelParser(Parser):
         # 'in >=' as an alternative to >=
         # Grammer Rule 49.c
         if isinstance(p.expr0, str) and isinstance(p.expr1, str):
+            return p.expr0 >= p.expr1
+        elif isinstance(p.expr0, int) and isinstance(p.expr1, int):             # Year, month durations
             return p.expr0 >= p.expr1
         elif isinstance(p.expr0, float) and isinstance(p.expr1, float):
             return p.expr0 >= p.expr1
@@ -414,14 +434,16 @@ class SFeelParser(Parser):
             return var0 + list(var1)
         if isinstance(var1, list):                                  # Prepend to a list
             return list(var0) + var1
-        if isinstance(var0, float) and isinstance(var1, float):     # Include addition of two durations(yearMonth)
+        if isinstance(var0, int) and isinstance(var1, int):         #  Addition of two durations(yearMonth)
+            return var0 + var1
+        if isinstance(var0, float) and isinstance(var1, float):
             return var0 + var1
         if isinstance(var0, str) and isinstance(var1, str):         # Concatenation of strings
             return var0 + var1
         if isinstance(var0, datetime.date):                     # True for bothe dates and datetimes
             if isinstance(var1, datetime.timedelta):            # date or datetime plus days and time duration
                 return var0 + var1
-            elif isinstance(var1, float):                       # date or datetime plus years and months duration
+            elif isinstance(var1, int):                       # date or datetime plus years and months duration
                 year = (var0).year
                 month = (var0).month + var1
                 while month < 1:                                # Allow for addition of a negative duration
@@ -436,7 +458,7 @@ class SFeelParser(Parser):
         if isinstance(var1, datetime.date):                 # Turee for both dates and datetimes
             if isinstance(var0, datetime.timedelta):         # days and time duration plus date or datetime
                 return var0 + var1
-            elif isinstance(var0, float):                    # years and months duration plus date or datetime
+            elif isinstance(var0, int):                    # years and months duration plus date or datetime
                 year = (var1).year
                 month = (var1).month + var0
                 while month < 1:                            # Allow for the addtions of a negative duration
@@ -471,7 +493,9 @@ class SFeelParser(Parser):
             var1 = p.expr1[0]
         else:
             var1 = p.expr1
-        if isinstance(var0, float) and isinstance(var1, float):     # Include subtraction of two durations(yearMonth)
+        if isinstance(var0, int) and isinstance(var1, int):         # Subtraction of two durations(yearMonth)
+            return var0 - var1
+        if isinstance(var0, float) and isinstance(var1, float):
             return var0 - var1
         if isinstance(var0, datetime.date):                         # True for both dates and datetimes
             if isinstance(var1, datetime.date):             # date or datetime minus date or datetime
@@ -481,7 +505,7 @@ class SFeelParser(Parser):
                     return None
             if isinstance(var1, datetime.timedelta):         # date/datetime minus days and time duration
                 return var0 - var1
-            if isinstance(var1, float):                    # date/datetime minus years and months duration
+            if isinstance(var1, int):                       # date/datetime minus years and months duration
                 year = (var0).year
                 month = (var0).month - p.expr1
                 while month > 12:
@@ -540,14 +564,17 @@ class SFeelParser(Parser):
             var1 = p.expr1[0]
         else:
             var1 = p.expr1
+        if isinstance(var0, int) and isinstance(var1, float):               # Year, month duration * number
+            return int(var0 * var1)
+        if isinstance(var0, float) and isinstance(var1, int):               # number * Year, month duration
+            return int(var0 * var1)
         if isinstance(var0, float) and isinstance(var1, float):
             return var0 * var1
-        elif isinstance(var0, datetime.timedelta) and isinstance(var1, float):
+        if isinstance(var0, datetime.timedelta) and isinstance(var1, float):
             return var0 * var1
-        elif isinstance(var1, datetime.timedelta) and isinstance(var0, float):
+        if isinstance(var1, datetime.timedelta) and isinstance(var0, float):
             return var0 * var1
-        else:
-            return None
+        return None
 
     @_('expr DIVIDE expr')
     def expr(self, p):
@@ -568,23 +595,34 @@ class SFeelParser(Parser):
             var1 = p.expr1[0]
         else:
             var1 = p.expr1
+        if var1 == 0:
+            return None
+        if isinstance(var0, int) and isinstance(var1, float):               # Year, month duration / number
+            try:
+                return int(var0 / var1)
+            except:
+                 return None
+        if isinstance(var0, int) and isinstance(var1, int):               # Year, month duration / Year, month duration
+            try:
+                return int(var0 / var1)
+            except:
+                 return None
         if isinstance(var0, float) and isinstance(var1, float):
             try:
                 return var0 / var1
             except:
                  return None
-        elif isinstance(var0, datetime.timedelta) and isinstance(var1, float):
+        if isinstance(var0, datetime.timedelta) and isinstance(var1, float):
             try:
                 return var0 / var1
             except:
                 return None
-        elif isinstance(var0, datetime.timedelta) and isinstance(var1, datetime.timedelta):
+        if isinstance(var0, datetime.timedelta) and isinstance(var1, datetime.timedelta):
             try:
                 return var0 / var1
             except:
                 return None
-        else:
-            return None
+        return None
 
     @_('MINUS expr %prec UMINUS')
     def expr(self, p):
@@ -597,12 +635,13 @@ class SFeelParser(Parser):
             var = p.expr[0]
         else:
             var = p.expr
+        if isinstance(var, int):                # Year, month duration
+            return -var
         if isinstance(var, float):
             return -var
-        elif isinstance(var, bool):
+        if isinstance(var, bool):
             return not var
-        else:
-            return None
+        return None
 
     @_('expr EQUALS expr')
     def expr(self, p):
@@ -740,7 +779,7 @@ class SFeelParser(Parser):
                     (equality, value) = p.listFilter
                     retList = []
                     for i in range(len(p.expr)):
-                        if (not isinstance(p.expr[i], str)) and (not isinstance(p.expr[i], float)):
+                        if (isinstance(p.expr[i], list)) or (isinstance(p.expr[i], dict)):
                             continue
                         item = p.expr[i]
                         if item is None:
@@ -802,14 +841,45 @@ class SFeelParser(Parser):
             return None
         return None
 
+    @_('expr PERIOD STARTINCLUDED')
+    def expr(self, p):
+        if isinstance(p.expr, tuple) and (len(p.expr) == 4):
+            (end0, low0, high1, end1) = p.expr
+            if end0 == '[':
+                return True
+            else:
+                return False
+        return False
+
+    @_('expr PERIOD ENDINCLUDED')
+    def expr(self, p):
+        if isinstance(p.expr, tuple) and (len(p.expr) == 4):
+            (end0, low0, high1, end1) = p.expr
+            if end1 == ']':
+                return True
+            else:
+                return False
+        return False
+
+    @_('expr PERIOD TIMEOFFSET')
+    def expr(self, p):
+        if isinstance(p.expr, datetime.datetime) or isinstance(p.expr, datetime.time):
+            try:
+                return p.expr.utcoffset()
+            except:
+                return None
+        return None
+
     @_('PERIOD NAME')
     def listSelect(self, p):
+        print('list selector:', p.NAME)
         return p.NAME
 
     @_('expr listSelect')
     def expr(self, p):
         ''' select value(s) for name p.listSelect from a list of contexts '''
         key = p.listSelect
+        print('selecting:', key, 'from', p.expr, 'of type', type(p.expr))
         if isinstance(p.expr, list):
             retList = []
             for i in range(len(p.expr)):
@@ -823,7 +893,78 @@ class SFeelParser(Parser):
                 return p.expr[key]
             else:
                 return None
-            
+        elif isinstance(p.expr, datetime.date):
+            if key == 'year':
+                return p.expr.year
+            elif key == 'month':
+                return p.expr.month
+            elif key == 'day':
+                return p.expr.day
+            elif key == 'weekday':
+                return p.expr.weekday()
+            else:
+                return None
+        elif isinstance(p.expr, datetime.datetime):
+            if key == 'year':
+                return p.expr.year
+            elif key == 'month':
+                return p.expr.month
+            elif key == 'day':
+                return p.expr.day
+            elif key == 'weekday':
+                return p.expr.weekday()
+            elif key == 'hour':
+                return p.expr.hour
+            elif key == 'minute':
+                return p.expr.minute
+            elif key == 'second':
+                return p.expr.second
+            elif key == 'timezone':
+                if key.tzinfo == None:
+                    return None
+                return p.expr.tzinfo.utcoffset(p.expr)
+            else:
+                return None
+        elif isinstance(p.expr, datetime.time):
+            if key == 'hour':
+                return p.expr.hour
+            elif key == 'minute':
+                return p.expr.minute
+            elif key == 'second':
+                return p.expr.second
+            elif key == 'timezone':
+                if p.expr.tzinfo == None:
+                    return None
+                return p.expr.tzinfo.utcoffset(p.expr)
+            else:
+                return None
+        elif isinstance(p.expr, datetime.timedelta):
+            if key == 'days':
+                return int(p.expr.total_seconds() / 60 / 60 / 24)
+            elif key == 'hours':
+                return int(p.expr.total_seconds() / 60 / 60) % 24
+            elif key == 'minutes':
+                return int(p.expr.total_seconds() / 60) % 60
+            elif key == 'seconds':
+                return p.expr.total_seconds() % 60
+            else:
+                return None
+        elif isinstance(p.expr, int):           # Year, month duration
+            if key == 'year':
+                return int(p.expr / 12)
+            elif key == 'month':
+                return p.expr % 12
+            else:
+                return None
+        elif isinstance(p.expr, tuple) and (len(p.expr) == 4):
+            (end0, low0, high1, end1) = p.expr
+            if key == 'start':
+                return low0
+            elif key == 'end':
+                return p.high1
+            else:
+                return None
+        return None            
 
     @_('expr LTTHANEQUAL expr')
     def expr(self, p):
@@ -1183,23 +1324,23 @@ class SFeelParser(Parser):
         ''' string from value'''
         if p.expr == None:
             return 'null'
-        elif isinstance(p.expr, bool):
+        if isinstance(p.expr, bool):
             if p.expr:
                 return 'true'
             else:
                 return 'false'
-        elif isinstance(p.expr, float):
+        if isinstance(p.expr, float):
             return str(p.expr)
         if isinstance(p.expr, str):
             return p.expr
-        elif isinstance(p.expr, datetime.date):         # True for both dates and datetimes
+        if isinstance(p.expr, datetime.date):         # True for both dates and datetimes
             if type(p.expr) is datetime.datetime:           # Only true for datetimes
                 return p.expr.isoformat(sep='T')
             else:
                 return p.expr.isoformat()
-        elif isinstance(p.expr, datetime.time):
+        if isinstance(p.expr, datetime.time):
             return p.expr.isoformat()
-        elif isinstance(p.expr, datetime.timedelta):
+        if isinstance(p.expr, datetime.timedelta):
             duration = p.expr.total_seconds()
             secs = duration % 60
             duration = int(duration / 60)
@@ -1208,6 +1349,11 @@ class SFeelParser(Parser):
             hours = duration % 24
             days = int(duration / 24)
             return 'P%dDT%dH%dM%dS' % (days, hours, mins, secs)
+        if isinstance(p.expr, int):                  # Year, month duration
+            year = int(p.expr / 12)
+            month = p.expr % 12
+            return 'P%dY%dM' % (year, month)
+        return None
 
     @_('NOTFUNC expr RPAREN')
     def expr(self, p):
@@ -1227,6 +1373,9 @@ class SFeelParser(Parser):
                 (end0, lowVal, highVal, end1) = thisList[i]
                 if isinstance(inValue, str):
                     if not isinstance(lowVal, str) or not isinstance(highVal, str):
+                        continue
+                elif isinstance(inValue, int):              # a list of Year, month durations
+                    if not isinstance(lowVal, int) or not isinstance(highVal, int):
                         continue
                 elif isinstance(inValue, float):
                     if not isinstance(lowVal, float) or not isinstance(highVal, float):
@@ -2315,9 +2464,9 @@ class SFeelParser(Parser):
     @_('ABSFUNC expr RPAREN')
     def expr(self, p):
         ''' absolute of a number '''
-        if not isinstance(p.expr, float):
-            return None
-        return abs(p.expr)
+        if isinstance(p.expr, float) or isinstance(p.expr, int) or isinstance(p.expr, datetime.timedelta):
+            return abs(p.expr)
+        return None
         
     @_('MODULOFUNC expr COMMA expr RPAREN')
     def expr(self, p):
@@ -2442,24 +2591,24 @@ class SFeelParser(Parser):
     @_('VALUEYMDFUNC expr RPAREN')
     def expr(self, p):
         ''' Convert YM duration to months'''
-        # Internally, YM durations are floats
-        if isinstance(p.expr, float):
+        # Internally, YM durations are ints
+        if isinstance(p.expr, int):
             return p.expr
         else:
             return None
         
     @_('VALUEYMD1FUNC expr RPAREN')
     def expr(self, p):
-        ''' Convert 'months' to YM duration'''
-        # internally, YM durations are floats '''
+        ''' Convert a number of 'months' to YM duration'''
+        # internally, YM durations are ints '''
         if isinstance(p.expr, float):
-            return p.expr
+            return int(p.expr)
         else:
             return None
         
     @_('DURATIONFUNC expr RPAREN')
     def expr(self, p):
-        ''' Convert a duration string to datetime.timedelta or float '''
+        ''' Convert a duration string to datetime.timedelta or int '''
         if not isinstance(p.expr, str):
             return None
         duration = p.expr
@@ -2494,9 +2643,9 @@ class SFeelParser(Parser):
                     except:
                         return None
             if sign == 0:
-                return float(months)
+                return int(months)
             else:
-                return -float(months)
+                return -int(months)
         else:
             days = seconds = milliseconds = 0
             if parts[0] != '':          # days is optional
@@ -2554,7 +2703,7 @@ class SFeelParser(Parser):
                 months -= 1
             else:
                 months += 1
-        return float(months)
+        return int(months)
 
 
     @_('GETVALUEFUNC expr COMMA NAME RPAREN')
@@ -2609,6 +2758,8 @@ class SFeelParser(Parser):
         # Check lowPoint is 'before' highPoint
         if isinstance(lowPoint, str) and not isinstance(highPoint, str):
             return False
+        elif isinstance(lowPoint, int) and not isinstance(highPoint, int):              # a range of Year, month durations
+            return False
         elif isinstance(lowPoint, float) and not isinstance(highPoint, float):
             return False
         elif isinstance(lowPoint, datetime.date) and not isinstance(highPoint, datetime.date):      # True for both dates and datetimes
@@ -2639,6 +2790,8 @@ class SFeelParser(Parser):
         # Check lowPoint is 'before' highPoint
         if isinstance(lowPoint, str) and not isinstance(highPoint, str):
             return False
+        elif isinstance(lowPoint, int) and not isinstance(highPoint, int):                      # a range of Year, month durations
+            return False
         elif isinstance(lowPoint, float) and not isinstance(highPoint, float):
             return False
         elif isinstance(lowPoint, datetime.date) and not isinstance(highPoint, datetime.date):      # True for both dates and datetimes
@@ -2667,6 +2820,8 @@ class SFeelParser(Parser):
         # Check highPoint matches lowPoint
         if isinstance(highPoint, str) and not isinstance(lowPoint, str):
             return False
+        elif isinstance(highPoint, int) and not isinstance(lowPoint, int):                          # a range of Year, month durations
+            return False
         elif isinstance(highPoint, float) and not isinstance(lowPoint, float):
             return False
         elif isinstance(highPoint, datetime.date) and not isinstance(lowPoint, datetime.date):      # True for both dates and datetimes
@@ -2693,6 +2848,8 @@ class SFeelParser(Parser):
         # Check lowPoint matches highPoint
         if isinstance(lowPoint, str) and not isinstance(highPoint, str):
             return False
+        elif isinstance(lowPoint, int) and not isinstance(highPoint, int):                      # a range of Year, month durations
+            return False
         elif isinstance(lowPoint, float) and not isinstance(highPoint, float):
             return False
         elif isinstance(lowPoint, datetime.date) and not isinstance(highPoint, datetime.date):      # True for both dates and datetimes
@@ -2718,6 +2875,9 @@ class SFeelParser(Parser):
             return False
         if isinstance(low0Val, str):
             if not isinstance(low1Val, str) or not isinstance(high1Val, str):
+                return False
+        elif isinstance(low0Val, int):                                          # a range of Year, month durations
+            if not isinstance(low1Val, int) or not isinstance(high1Val, int):
                 return False
         elif isinstance(low0Val, float):
             if not isinstance(low1Val, float) or not isinstance(high1Val, float):
@@ -2767,6 +2927,9 @@ class SFeelParser(Parser):
         if isinstance(low0Val, str):
             if not isinstance(low1Val, str):
                 return False
+        elif isinstance(low0Val, int):                      # a range of Year, month durations
+            if not isinstance(low1Val, int):
+                return False
         elif isinstance(low0Val, float):
             if not isinstance(low1Val, float):
                 return False
@@ -2808,6 +2971,9 @@ class SFeelParser(Parser):
         if isinstance(low0Val, str):
             if not isinstance(low1Val, str) or not isinstance(high1Val, str):
                 return False
+        elif isinstance(low0Val, int):                          # a range of Year, month durations
+            if not isinstance(low1Val, int) or not isinstance(high1Val, int):
+                return False
         elif isinstance(low0Val, float):
             if not isinstance(low1Val, float) or not isinstance(high1Val, float):
                 return False
@@ -2848,6 +3014,8 @@ class SFeelParser(Parser):
         # Check highPoint is thePoint
         if isinstance(thePoint, str) and not isinstance(highPoint, str):
             return False
+        elif isinstance(thePoint, int) and not isinstance(highPoint, int):              # a range of Year, month durations
+            return False
         elif isinstance(thePoint, float) and not isinstance(highPoint, float):
             return False
         elif isinstance(thePoint, datetime.date) and not isinstance(highPoint, datetime.date):      # True for both dates and datetimes
@@ -2874,6 +3042,8 @@ class SFeelParser(Parser):
             thePoint = p.expr1
         # Check thePoint is highPoint
         if isinstance(thePoint, str) and not isinstance(highPoint, str):
+            return False
+        elif isinstance(thePoint, int) and not isinstance(highPoint, int):                  # a range of Year, month durations
             return False
         elif isinstance(thePoint, float) and not isinstance(highPoint, float):
             return False
@@ -2902,6 +3072,8 @@ class SFeelParser(Parser):
             lowVal1 = highVal1 = p.expr1
         # Check lowVal0..highVal0 include lowVa1..highVal1
         if isinstance(lowVal0, str) and not isinstance(highVal0, str):
+            return False
+        elif isinstance(lowVal0, int) and not isinstance(highVal0, int):                        # a range of Year, month durations
             return False
         elif isinstance(lowVal0, float) and not isinstance(highVal0, float):
             return False
@@ -2937,6 +3109,8 @@ class SFeelParser(Parser):
         # Check highVal0..highVal1 includes lowVal0..lowVal1
         if isinstance(lowVal0, str) and not isinstance(lowVal1, str):
             return False
+        elif isinstance(lowVal0, int) and not isinstance(lowVal1, int):                     # a range of Year, month durations
+            return False
         elif isinstance(lowVal0, float) and not isinstance(lowVal1, float):
             return False
         elif isinstance(lowVal0, datetime.date) and not isinstance(lowVal1, datetime.date):      # True for both dates and datetimes
@@ -2971,6 +3145,8 @@ class SFeelParser(Parser):
         # Check lowVal0..highVal0 starts lowVal1..highVal1, but doesn't go beyond
         if isinstance(lowVal0, str) and not isinstance(lowVal1, str):
             return False
+        elif isinstance(lowVal0, int) and not isinstance(lowVal1, int):                     # a range of Year, month durations
+            return False
         elif isinstance(lowVal0, float) and not isinstance(lowVal1, float):
             return False
         elif isinstance(lowVal0, datetime.date) and not isinstance(lowVal1, datetime.date):      # True for both dates and datetimes
@@ -3004,6 +3180,8 @@ class SFeelParser(Parser):
         # Check lowVal0..highVal0 is started by lowVal1..highVal1, but doesn't go beyond
         if isinstance(lowVal0, str) and not isinstance(lowVal1, str):
             return False
+        elif isinstance(lowVal0, int) and not isinstance(lowVal1, int):                 # a range of Year, month durations
+            return False
         elif isinstance(lowVal0, float) and not isinstance(lowVal1, float):
             return False
         elif isinstance(lowVal0, datetime.date) and not isinstance(lowVal1, datetime.date):      # True for both dates and datetimes
@@ -3035,6 +3213,8 @@ class SFeelParser(Parser):
         # Check range p.expr0 coincides with range p.expr1
         if isinstance(lowVal0, str) and not isinstance(lowVal1, str):
             return False
+        elif isinstance(lowVal0, int) and not isinstance(lowVal1, int):                     # a range of Year, month durations
+            return False
         elif isinstance(lowVal0, float) and not isinstance(lowVal1, float):
             return False
         elif isinstance(lowVal0, datetime.date) and not isinstance(lowVal1, datetime.date):      # True for both dates and datetimes
@@ -3053,27 +3233,27 @@ class SFeelParser(Parser):
 
     @_('DAYOFYEARFUNC expr RPAREN')
     def expr(self, p):
-        if isinstance(p.expr, datetime.date):
+        if isinstance(p.expr, datetime.date) or isinstance(p.expr, datetime.datetime):
             return p.expr.timetuple().tm_yday
         return False
 
     @_('DAYOFWEEKFUNC expr RPAREN')
     def expr(self, p):
         days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        if isinstance(p.expr, datetime.date):
+        if isinstance(p.expr, datetime.date) or isinstance(p.expr, datetime.datetime):
             return days[p.expr.weekday()]
         return False
 
     @_('MONTHOFYEARFUNC expr RPAREN')
     def expr(self, p):
         months = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-        if isinstance(p.expr, datetime.date):
+        if isinstance(p.expr, datetime.date) or isinstance(p.expr, datetime.datetime):
             return months[p.expr.month]
         return False
 
     @_('WEEKOFYEARFUNC expr RPAREN')
     def expr(self, p):
-        if isinstance(p.expr, datetime.date):
+        if isinstance(p.expr, datetime.date) or isinstance(p.expr, datetime.datetime):
             (year, week, weekday) = p.expr.isocalendar()
             return week
         return False
@@ -3087,11 +3267,78 @@ class SFeelParser(Parser):
 
     @_('NAME')
     def expr(self, p):
-        try:
+        if p.NAME in self.names:
             return self.names[p.NAME]
-        except LookupError:
-            self.errors.append(f'Undefined name {p.NAME!r}')
-            return 0
+        elif p.NAME.endswith('.year') and p.NAME[:-5] in self.names:
+            value = self.names[p.NAME[:-5]]
+            if isinstance(value, datetime.date) or isinstance(value, datetime.datetime):
+                return value.year
+        elif p.NAME.endswith('.month') and p.NAME[:-6] in self.names:
+            value = self.names[p.NAME[:-6]]
+            if isinstance(value, datetime.date) or isinstance(value, datetime.datetime):
+                return value.month
+        elif p.NAME.endswith('.day') and p.NAME[:-4] in self.names:
+            value = self.names[p.NAME[:-4]]
+            if isinstance(value, datetime.date) or isinstance(value, datetime.datetime):
+                return value.day
+        elif p.NAME.endswith('.weekday') and p.NAME[:-8] in self.names:
+            value = self.names[p.NAME[:-8]]
+            if isinstance(value, datetime.date) or isinstance(value, datetime.datetime):
+                return value.weekday()
+        elif p.NAME.endswith('.hour') and p.NAME[:-5] in self.names:
+            value = self.names[p.NAME[:-5]]
+            if isinstance(value, datetime.datetime) or isinstance(value, datetime.time):
+                return value.hour
+        elif p.NAME.endswith('.minute') and p.NAME[:-7] in self.names:
+            value = self.names[p.NAME[:-7]]
+            if isinstance(value, datetime.datetime) or isinstance(value, datetime.time):
+                return value.minute
+        elif p.NAME.endswith('.second') and p.NAME[:-7] in self.names:
+            value = self.names[p.NAME[:-7]]
+            if isinstance(value, datetime.datetime) or isinstance(value, datetime.time):
+                return value.second
+        elif p.NAME.endswith('.timezone') and p.NAME[:-9] in self.names:
+            value = self.names[p.NAME[:-9]]
+            if isinstance(value, datetime.datetime) or isinstance(value, datetime.time):
+                if value.tzinfo == None:
+                    return None
+                return value.tzinfo.utcoffset(value)
+        elif p.NAME.endswith('.days') and p.NAME[:-5] in self.names:
+            value = self.names[p.NAME[:-5]]
+            if isinstance(value, datetime.timedelta):
+                return int(ValuesView.total_seconds() / 60 / 60 / 24)
+        elif p.NAME.endswith('.hours') and p.NAME[:-6] in self.names:
+            value = self.names[p.NAME[:-6]]
+            if isinstance(value, datetime.timedelta):
+                return int(value.total_seconds() / 60 / 60) % 24
+        elif p.NAME.endswith('.minutes') and p.NAME[:-8] in self.names:
+            value = self.names[p.NAME[:-8]]
+            if isinstance(value, datetime.timedelta):
+                return int(value.total_seconds() / 60) % 60
+        elif p.NAME.endswith('.seconds') and p.NAME[:-8] in self.names:
+            value = self.names[p.NAME[:-8]]
+            if isinstance(value, datetime.timedelta):
+                return value.total_seconds() % 60
+        elif p.NAME.endswith('.years') and p.NAME[:-6] in self.names:
+            value = self.names[p.NAME[:-6]]
+            if isinstance(value, int):
+                return int(value / 12)
+        elif p.NAME.endswith('.months') and p.NAME[:-7] in self.names:
+            value = self.names[p.NAME[:-7]]
+            if isinstance(value, int):
+                return value % 12
+        elif p.NAME.endswith('.start') and p.NAME[:-6] in self.names:
+            value = self.names[p.NAME[:-6]]
+            if isinstance(value, tuple) and (len(value) == 4):
+                (end0, low0, high1, end1) = value
+                return low0
+        elif p.NAME.endswith('.end') and p.NAME[:-4] in self.names:
+            value = self.names[p.NAME[:-4]]
+            if isinstance(value, tuple) and (len(value) == 4):
+                (end0, low0, high1, end1) = value
+                return p.high1
+        self.errors.append(f'Undefined name {p.NAME!r}')
+        return 0
 
     @_('STRING')
     def expr(self, p):
@@ -3184,7 +3431,7 @@ class SFeelParser(Parser):
 
     @_('YMDURATION')
     def expr(self, p):
-        ''' Convert year/month duration string into float '''
+        ''' Convert year/month duration string into int '''
         duration = p.YMDURATION
         sign = 0
         if duration[0] == '-':
@@ -3214,9 +3461,9 @@ class SFeelParser(Parser):
             except:
                 return None
         if sign == 0:
-            return float(months)
+            return int(months)
         else:
-            return -float(months)
+            return -int(months)
 
     @_('NUMBER')
     def expr(self, p):
