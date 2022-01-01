@@ -1,3 +1,4 @@
+### 1.3.4 - A build for release to PyPI
 ### 1.3.3 - Implemented support for @region/location timezones
 * Implemented support for string literals (@"xx")  
 a string literal of a Years, months duration will return an int (@"P2Y3M" == 27)  
