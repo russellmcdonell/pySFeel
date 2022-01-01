@@ -48,11 +48,8 @@ pySFeel converts S-FEEL data into the nearest equivalent Python native data type
 |      Context             |         dict            |
 +--------------------------+-------------------------+
 
-Literal strings (@"PT5H") are implemented as bare strings (PT5H).  
-@"PT5H" > @"PT4H"  
-must be written as  
-PT5H > PT4H  
-and would return True
+Literal strings (@"PT5H") are also implemented as bare strings (PT5H).  
+@"PT5H" > @"PT4H" can be written as PT5H > PT4H and would return True
 
 List and Context Filters
 ------------------------

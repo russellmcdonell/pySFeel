@@ -1,3 +1,7 @@
+### 1.3.3 - Implemented support for @region/location timezones
+* Implemented support for string literals (@"xx")  
+a string literal of a Years, months duration will return an int (@"P2Y3M" == 27)  
+a string litteral of a Days, time duration will return a datetime.timedelta (@"P2DT15H12M" == 2 day, 15:12:00)
 ### 1.3.2 - Changed Year, month duration
 * Year, month durations are now represented internally as 'int' - giving them their own data type  
 (required to make is() function work correctly. Also tightens up validation of expressions involving year and month durations, some of which were incorrectly allowed)
@@ -5,6 +9,8 @@
 NOTE: For the attributes 'time offset', 'start included' and 'end included' the names need to be enclosed in (); space is not a valid character in a name/attribute 
 if fred is a range then (fred).start included will return True if the start of the range is included in the range.  
 However, fred.start included will generate a syntax error at 'included', as 'fred.start' is a valid variable name.
+NOTE: start_included, end_included and time_offset have been implemented as equivalent attributes.
+if fred is a range then fred.start_included will return True if the start of the range is included in the range.  
 ### 1.3.1 - Added DMN 1.3 functions
 * Fixed bug in string(duration)
 * Fixed bugs in date and duration arithmatic

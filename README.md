@@ -1,16 +1,17 @@
 # pySFeel
 An implementation S-FEEL (Simple Expression Language) as specified in the DMN (Decision Model Notation) standard.
-pySFeel is implemented in Python, using the [SLY](https://pypi.org/project/pyDMNrules/) module and has many FEEL features.
+pySFeel is implemented in Python, using the [SLY](https://pypi.org/projects/sly/) module and has many FEEL features.
 * **not**, **and** and **or** in logical expressions which can be enclosed in round brackets (())
 * in() function, e.g. 5 in(<6)
 * Lists and filters
 * Contexts and filters
 * Ranges
 * Built in functions
+* New DMN 1.3 built in functions - is(), and the range comparison functions
 
 pySFeel processes a single S-FEEL statement at a time.
 It is not intended to be a syntactically perfect implementation of S-FEEL,
-but rather an enabler for an implementation of DMN (Decision Model Notation) [pyDMNrules](https://pypi.org/project/pyDMNrules/).
+but rather an enabler for an implementation of DMN (Decision Model Notation) [pyDMNrules](https://pypi.org/projects/pyDMNrules/).
 The internal data types are float, string, boolean, datetime.date, datetime.time, and datetime.timedelta.
 The S-FEEL constant null is mapped to None.
 Years and months durations are stored as floats. Days and time durations are stored as datetime.timedelta

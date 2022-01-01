@@ -1,5 +1,6 @@
 from sly.yacc import ERROR_COUNT
 import datetime
+import dateutil
 import pySFeel
 
 parser = pySFeel.SFeelParser()
@@ -579,13 +580,21 @@ class TestClass:
         SFeel = 'time("23:59:00Z") + duration("PT2M")'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == datetime.time(hour=0, minute=1, second=0)
+        tzinfo = dateutil.tz.UTC
+        assert retval == datetime.time(hour=0, minute=1, second=0, tzinfo=tzinfo)
 
     def test_time2(self):
         SFeel = 'time(date and time("2012-12-31T11:00:00Z"))'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == datetime.time(hour=11, minute=0, second=0)
+        tzinfo = dateutil.tz.UTC
+        assert retval == datetime.time(hour=11, minute=0, second=0, tzinfo=tzinfo)
+
+    def test_time3(self):
+        SFeel = 'time("00:01:00@Etc/UTC")'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.time(hour=0, minute=1, second=0)
 
     def test_number1(self):
         SFeel = 'number("1,000.0", ",", ".")'
@@ -2284,4 +2293,552 @@ class TestClass:
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
         assert retval == 1
+
+    def test_edotyear1(self):
+        SFeel = 'date(2005, 1, 9).year'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 2005
+
+    def test_edotyear2(self):
+        SFeel = 'thisDate <- date(2005, 1, 9)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.date(year=2005, month=1, day=9)
+        SFeel = 'thisDate.year'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 2005
+
+    def test_edotyear3(self):
+        SFeel = '(2005-01-09).year'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 2005
+
+    def test_edotyear4(self):
+        SFeel = 'date and time("2005-01-09T12:00:15").year'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 2005
+
+    def test_edotyear5(self):
+        SFeel = 'thisDateTime <- date and time(date(2005, 1, 9), time(12, 0, 15))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15)
+        SFeel = 'thisDateTime.year'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 2005
+
+    def test_edotyear6(self):
+        SFeel = '(2005-01-09T12:00:15).year'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 2005
+
+    def test_edotyear7(self):
+        SFeel = '@"2005-01-09T12:00:15".year'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 2005
+
+    def test_edotmonth1(self):
+        SFeel = 'date(2005, 1, 9).month'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 1
+
+    def test_edotmonth2(self):
+        SFeel = 'thisDate <- date(2005, 1, 9)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.date(year=2005, month=1, day=9)
+        SFeel = 'thisDate.month'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 1
+
+    def test_edotmonth3(self):
+        SFeel = '(2005-01-09).month'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 1
+
+    def test_edotmonth4(self):
+        SFeel = 'date and time("2005-01-09T12:00:15").month'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 1
+
+    def test_edotmonth5(self):
+        SFeel = 'thisDateTime <- date and time(date(2005, 1, 9), time(12, 0, 15))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15)
+        SFeel = 'thisDateTime.month'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 1
+
+    def test_edotmonth6(self):
+        SFeel = '(2005-01-09T12:00:15).month'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 1
+
+    def test_edotmonth7(self):
+        SFeel = '@"2005-01-09T12:00:15".month'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 1
+
+    def test_edotyday1(self):
+        SFeel = 'date(2005, 1, 9).day'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 9
+
+    def test_edotday2(self):
+        SFeel = 'thisDate <- date(2005, 1, 9)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.date(year=2005, month=1, day=9)
+        SFeel = 'thisDate.day'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 9
+
+    def test_edotday3(self):
+        SFeel = '(2005-01-09).day'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 9
+
+    def test_edotday4(self):
+        SFeel = 'date and time("2005-01-09T12:00:15").day'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 9
+
+    def test_edotday5(self):
+        SFeel = 'thisDateTime <- date and time(date(2005, 1, 9), time(12, 0, 15))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15)
+        SFeel = 'thisDateTime.day'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 9
+
+    def test_edotday6(self):
+        SFeel = '(2005-01-09T12:00:15).day'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 9
+
+    def test_edotday7(self):
+        SFeel = '@"2005-01-09T12:00:15".day'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 9
+
+    def test_edotweekday1(self):
+        SFeel = 'date(2005, 1, 9).weekday'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.date(year=2005, month=1, day=9).weekday()
+
+    def test_edotweekday2(self):
+        SFeel = 'thisDate <- date(2005, 1, 9)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.date(year=2005, month=1, day=9)
+        SFeel = 'thisDate.weekday'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.date(year=2005, month=1, day=9).weekday()
+
+    def test_edotweekday3(self):
+        SFeel = '(2005-01-09).weekday'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.date(year=2005, month=1, day=9).weekday()
+
+    def test_edotweekday4(self):
+        SFeel = 'date and time("2005-01-09T12:00:15").weekday'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15).weekday()
+
+    def test_edotweekday5(self):
+        SFeel = 'thisDateTime <- date and time(date(2005, 1, 9), time(12, 0, 15))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15)
+        SFeel = 'thisDateTime.weekday'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15).weekday()
+
+    def test_edotweekday6(self):
+        SFeel = '(2005-01-09T12:00:15).weekday'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15).weekday()
+
+    def test_edotweekday7(self):
+        SFeel = '@"2005-01-09T12:00:15".weekday'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15).weekday()
+
+    def test_edothour1(self):
+        SFeel = 'time(12, 0, 15).hour'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 12
+
+    def test_edothour2(self):
+        SFeel = 'thisTime <- time(12, 0, 15)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.time(hour=12, minute=0, second=15)
+        SFeel = 'thisTime.hour'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 12
+
+    def test_edothour3(self):
+        SFeel = '(12:00:15).hour'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 12
+
+    def test_edothour4(self):
+        SFeel = 'date and time("2005-01-09T12:00:15").hour'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 12
+
+    def test_edothour5(self):
+        SFeel = 'thisDateTime <- date and time(date(2005, 1, 9), time(12, 0, 15))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15)
+        SFeel = 'thisDateTime.hour'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 12
+
+    def test_edothour6(self):
+        SFeel = '(2005-01-09T12:00:15).hour'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 12
+
+    def test_edothour7(self):
+        SFeel = '@"2005-01-09T12:00:15".hour'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 12
+
+    def test_edotminute1(self):
+        SFeel = 'time(12, 0, 15).minute'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 0
+
+    def test_edotminute2(self):
+        SFeel = 'thisTime <- time(12, 0, 15)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.time(hour=12, minute=0, second=15)
+        SFeel = 'thisTime.minute'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 0
+
+    def test_edotminute3(self):
+        SFeel = '(12:00:15).minute'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 0
+
+    def test_edotminute4(self):
+        SFeel = 'date and time("2005-01-09T12:00:15").minute'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 0
+
+    def test_edotminute5(self):
+        SFeel = 'thisDateTime <- date and time(date(2005, 1, 9), time(12, 0, 15))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15)
+        SFeel = 'thisDateTime.minute'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 0
+
+    def test_edotminute6(self):
+        SFeel = '(2005-01-09T12:00:15).minute'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 0
+
+    def test_edotminute7(self):
+        SFeel = '@"2005-01-09T12:00:15".minute'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 0
+
+    def test_edotsecond1(self):
+        SFeel = 'time(12, 0, 15).second'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 15
+
+    def test_edotsecond2(self):
+        SFeel = 'thisTime <- time(12, 0, 15)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.time(hour=12, minute=0, second=15)
+        SFeel = 'thisTime.second'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 15
+
+    def test_edotsecond3(self):
+        SFeel = '(12:00:15).second'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 15
+
+    def test_edotsecond4(self):
+        SFeel = 'date and time("2005-01-09T12:00:15").second'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 15
+
+    def test_edotsecond5(self):
+        SFeel = 'thisDateTime <- date and time(date(2005, 1, 9), time(12, 0, 15))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15)
+        SFeel = 'thisDateTime.second'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 15
+
+    def test_edotsecond6(self):
+        SFeel = '(2005-01-09T12:00:15).second'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 15
+
+    def test_edotsecond7(self):
+        SFeel = '@"2005-01-09T12:00:15".second'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 15
+
+    def test_edottimezone1(self):
+        SFeel = 'time(12, 0, 15, @"PT8H").timezone'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 'UTC+08:00'
+
+    def test_edottimezone2(self):
+        SFeel = 'thisTime <- time(12, 0, 15, @"PT8H")'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.time.fromisoformat('12:00:15+08:00')
+        SFeel = 'thisTime.timezone'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.time.fromisoformat('12:00:15+08:00').tzname()
+
+    def test_edottimezone3(self):
+        SFeel = '(12:00:15@Australia/Perth).timezone'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 'AWST'
+
+    def test_edottimezone4(self):
+        SFeel = 'date and time("2005-01-09T12:00:15@Australia/Perth").timezone'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 'AWST'
+
+    def test_edottimezone5(self):
+        SFeel = 'thisDateTime <- date and time(date(2005, 1, 9), time(12, 0, 15, @"PT8H"))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime.fromisoformat('2005-01-09T12:00:15+08:00')
+        SFeel = 'thisDateTime.timezone'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.time.fromisoformat('12:00:15+08:00').tzname()
+
+    def test_edottimezone6(self):
+        SFeel = '(2005-01-09T12:00:15@Australia/Perth).timezone'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 'AWST'
+
+    def test_edottimezone7(self):
+        SFeel = '@"2005-01-09T12:00:15@Australia/Perth".timezone'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 'AWST'
+
+    def test_edottimeoffset1(self):
+        SFeel = 'time(12, 0, 15, @"PT8H").time offset'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.timedelta(seconds=8*60*60)
+
+    def test_edottimeoffset2(self):
+        SFeel = 'thisTime <- time(12, 0, 15, @"PT8H")'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.time.fromisoformat('12:00:15+08:00')
+        SFeel = 'thisTime.time_offset'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.timedelta(seconds=8*60*60)
+
+    def test_edottimeoffset3(self):
+        SFeel = '(12:00:15@Australia/Perth).time offset'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.timedelta(seconds=8*60*60)
+
+    def test_edottimeoffset4(self):
+        SFeel = 'date and time("2005-01-09T12:00:15@Australia/Perth").time offset'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.timedelta(seconds=8*60*60)
+
+    def test_edottimeoffset5(self):
+        SFeel = 'thisDateTime <- date and time(date(2005, 1, 9), time(12, 0, 15, @"PT8H"))'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.datetime.fromisoformat('2005-01-09T12:00:15+08:00')
+        SFeel = 'thisDateTime.time_offset'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.timedelta(seconds=8*60*60)
+
+    def test_edottimeoffset6(self):
+        SFeel = '(2005-01-09T12:00:15@Australia/Perth).time offset'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.timedelta(seconds=8*60*60)
+
+    def test_edottimeoffset7(self):
+        SFeel = '@"2005-01-09T12:00:15@Australia/Perth".time offset'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == datetime.timedelta(seconds=8*60*60)
+
+    def test_edotyears1(self):
+        SFeel = '(P2Y3M).years'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 2
+
+    def test_edotyears2(self):
+        SFeel = '@"P2Y3M".years'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 2
+
+    def test_edotmonths1(self):
+        SFeel = '(P2Y3M).months'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 3
+
+    def test_edotymonth2(self):
+        SFeel = '@"P2Y3M".months'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 3
+
+    def test_edotdays1(self):
+        SFeel = '(P2DT3H15M12S).days'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 2
+
+    def test_edotdays2(self):
+        SFeel = '@"P2DT3H15M12S".days'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 2
+
+    def test_edothours1(self):
+        SFeel = '(P2DT3H15M12S).hours'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 3
+
+    def test_edothours2(self):
+        SFeel = '@"P2DT3H15M12S".hours'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 3
+
+    def test_edotminutes1(self):
+        SFeel = '(P2DT3H15M12S).minutes'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 15
+
+    def test_edotminutes2(self):
+        SFeel = '@"P2DT3H15M12S".minutes'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 15
+
+    def test_edotseconds1(self):
+        SFeel = '(P2DT3H15M12S).seconds'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 12
+
+    def test_edotseconds2(self):
+        SFeel = '@"P2DT3H15M12S".seconds'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 12
+
+    def test_edotstart1(self):
+        SFeel = '[0 .. 10].start'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 0
+
+    def test_edotend1(self):
+        SFeel = '[0 .. 10].end'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == 10
+
+    def test_edotstartincluded1(self):
+        SFeel = '[0 .. 10].start included'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+    def test_edotendincluded1(self):
+        SFeel = '[0 .. 10].end included'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == True
+
+
 
