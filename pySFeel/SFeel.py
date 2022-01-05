@@ -2783,6 +2783,9 @@ class SFeelParser(Parser):
         ''' Test that two expressions are the same FEEL semantic domain'''
         if type(p.expr0) != type(p.expr1):
             return False
+        # Data structures are expressions, but they are not data types
+        if isinstance(p.expr0, tuple) or isinstance(p.expr0, list) or isinstance(p.expr0, dict):
+            return False
         if (not isinstance(p.expr0, datetime.datetime)) and (not isinstance(p.expr0, datetime.time)):
             return True
         if p.expr0.tzinfo == p.expr1.tzinfo:
@@ -3044,7 +3047,7 @@ class SFeelParser(Parser):
             if (end00 == '(') or (end11 == ')'):    # One is a closed range
                 return False
         if high0Val == high1Val:    # range p.expr0 and range p.expr1 end at the same point
-            if (end01 == ')') or (end11 == ']'):        # make sure there is some overlap 'after' the end
+            if (end01 == ')') and (end11 == ']'):        # make sure there is some overlap 'after' the end
                 return False
         return True     # reaches and overlaps
         

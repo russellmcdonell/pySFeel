@@ -1824,7 +1824,7 @@ class TestClass:
         SFeel = 'overlaps after((1 .. 5], [1 .. 5])'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == False
+        assert retval == True
 
     def test_overlapsafter8(self):
         SFeel = 'overlaps after([1 .. 5], [1 .. 5))'

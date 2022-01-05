@@ -28,28 +28,35 @@ pySFeel converts S-FEEL data into the nearest equivalent Python native data type
 |     S-Feel data type     | Python native data type |
 +==========================+=========================+
 |         number           |         float           |
-+--------------------------+-------------------------+
-|         string           |          str            |
-+--------------------------+-------------------------+
-|        boolean           |         bool            |
-+--------------------------+-------------------------+
-|  days and time duration  |   datetime.timedelta    |
-+--------------------------+-------------------------+
-| year and months duration |          int            |
-+--------------------------+-------------------------+
-|        time              |     datetime.time       |
-+--------------------------+-------------------------+
-|        date              |     datetime.date       |
-+--------------------------+-------------------------+
-|   date and time          |   datetime.datetime     |
-+--------------------------+-------------------------+
-|        List              |         list            |
-+--------------------------+-------------------------+
-|      Context             |         dict            |
-+--------------------------+-------------------------+
++--------------------------+--------------------------------+
+|         string           |             str                |
++--------------------------+--------------------------------+
+|        boolean           |            bool                |
++--------------------------+--------------------------------+
+|  days and time duration  |      datetime.timedelta        |
++--------------------------+--------------------------------+
+| year and months duration |             int                |
++--------------------------+--------------------------------+
+|        time              |        datetime.time           |
++--------------------------+--------------------------------+
+|        date              |        datetime.date           |
++--------------------------+--------------------------------+
+|   date and time          |      datetime.datetime         |
++--------------------------+--------------------------------+
+|        List              |            list                |
++--------------------------+--------------------------------+
+|      Context             |            dict                |
++--------------------------+--------------------------------+
+|       Range              | tuple(end0, low0, high1, end1) |
+|                          | where end0 is '[' or '('       |
+|                          |   and end1 is ')' or ']'       |    
++--------------------------+--------------------------------+
 
-Literal strings (@"PT5H") are also implemented as bare strings (PT5H).  
-@"PT5H" > @"PT4H" can be written as PT5H > PT4H and would return True
+| Literal strings (@"PT5H") are implemented as both literal strings (@"PT5H") and as bare strings (PT5H).
+| @"PT5H" > @"PT4H" can be written as PT5H > PT4H and would return True
+| NOTE: For safety, enclose 'codes' in double quotes.
+| The ICD-10 code P04D, if not enclosed in double qoutes, will be interpreted as a day and time duration of 4 days.
+| The AN-SNAP code if 499A will throw a syntax error if not enclosed in double quotes, as '499' will be interpreted as a number that should be followed by an operator.
 
 List and Context Filters
 ------------------------
