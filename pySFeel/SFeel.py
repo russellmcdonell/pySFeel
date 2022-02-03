@@ -3,8 +3,6 @@
 # -----------------------------------------------------------------------------
 
 from enum import IntFlag
-from os import truncate
-from typing import KeysView, ValuesView
 from sly import Lexer, Parser
 import re
 import datetime
@@ -31,7 +29,6 @@ class SFeelLexer(Lexer):
               BEFOREFUNC, AFTERFUNC, MEETSFUNC, METBYFUNC, OVERLAPSFUNC, OVERLAPSBEFOREFUNC, OVERLAPSAFTERFUNC,
               FINISHESFUNC, FINISHEDBYFUNC, INCLUDESFUNC, DURINGFUNC, STARTSFUNC, STARTEDBYFUNC, COINCIDESFUNC,
               DAYOFYEARFUNC, DAYOFWEEKFUNC, MONTHOFYEARFUNC, WEEKOFYEARFUNC,
-              STARTINCLUDED, ENDINCLUDED, TIMEOFFSET,
               NAME, ATSTRING, STRING, NULL,
               LBRACKET, RBRACKET,
               EQUALS, NOTEQUALS, LTTHANEQUAL, GTTHANEQUAL, LTTHAN, GTTHAN,
@@ -40,7 +37,8 @@ class SFeelLexer(Lexer):
               ELLIPSE, COMMA, DATETIME, DATE, TIME, DTDURATION, YMDURATION,
               NUMBER,
               LPAREN, RPAREN,
-              LCURLY, RCURLY, COLON, PERIOD,
+              LCURLY, RCURLY, COLON, DOTYEARS, DOTMONTHS, DOTDAYS, DOTHOURS, DOTMINUTES, DOTSECONDS,
+              DOTYEAR, DOTMONTH, DOTDAY, DOTWEEKDAY, DOTHOUR, DOTMINUTE, DOTSECOND, DOTTIMEZONE, DOTTIMEOFFSET, DOTSTART, DOTEND, DOTSTARTINCLUDED, DOTENDINCLUDED, PERIOD,
               IN, ITEM, ASSIGN
             }
     ignore = '\u000A\u000B\u000C\u000D\u0009\u0020\u0085\u00A0\u1680\u180E\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u200B\u2028\u2029\u202F\u205F\u3000\uFEFF'
@@ -131,9 +129,6 @@ class SFeelLexer(Lexer):
     WEEKOFYEARFUNC = r'week of year\('
     DTDURATION = r'-?P((([0-9]+D)(T(([0-9]+H)([0-9]+M)?([0-9]+(\.[0-9]+)?S)?|([0-9]+M)([0-9]+(\.[0-9]+)?S)?|([0-9]+(\.[0-9]+)?S)))?)|(T(([0-9]+H)([0-9]+M)?([0-9]+(\.[0-9]+)?S)?|([0-9]+M)([0-9]+(\.[0-9]+)?S)?|([0-9]+(\.[0-9]+)?S))))'
     YMDURATION = r'-?P[0-9]+Y[0-9]+M'
-    STARTINCLUDED = r'\bstart included\b'
-    ENDINCLUDED = r'\bend included\b'
-    TIMEOFFSET = r'\btime offset\b'
     NAME = (u'[?A-Z_a-z' +
             u'\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u02FF' +
             u'\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF' +
@@ -188,6 +183,25 @@ class SFeelLexer(Lexer):
     RCURLY = r'}'
     ELLIPSE = r'\.\.'
     COLON = r':'
+    DOTTIMEZONE = r'\.timezone'
+    DOTTIMEOFFSET = r'\.time offset'
+    DOTYEARS = r'\.years'
+    DOTMONTHS = r'\.months'
+    DOTDAYS = r'\.days'
+    DOTHOURS = r'\.hours'
+    DOTMINUTES = r'\.minutes'
+    DOTSECONDS = r'\.seconds'
+    DOTYEAR = r'\.year'
+    DOTMONTH = r'\.month'
+    DOTDAY = r'\.day'
+    DOTWEEKDAY = r'\.weekday'
+    DOTHOUR = r'\.hour'
+    DOTMINUTE = r'\.minute'
+    DOTSECOND = r'\.second'
+    DOTSTARTINCLUDED = r'\.start included'
+    DOTENDINCLUDED = r'\.end included'
+    DOTSTART = r'\.start'
+    DOTEND = r'\.end'
     PERIOD = r'\.'
     IN = r'in'
 
@@ -215,10 +229,14 @@ class SFeelParser(Parser):
         ('right', UMINUS),
         ('left', AND, OR, NOT, BETWEEN),
         ('left', LBRACKET, COMMA, RBRACKET),
+        ('left', DOTYEARS, DOTMONTHS, DOTDAYS, DOTHOURS, DOTMINUTES, DOTSECONDS),
+        ('left', DOTYEAR, DOTMONTH, DOTDAY, DOTWEEKDAY,DOTHOUR, DOTMINUTE, DOTSECOND, DOTTIMEZONE, DOTTIMEOFFSET, DOTSTART, DOTEND),
+        ('left', PERIOD),
         ('left', LPAREN, RPAREN),
         ('left', IN),
-        ('left', NAME),
+        ('left', NAME)
         )
+
 
     def __init__(self):
         self.names = { }
@@ -841,38 +859,81 @@ class SFeelParser(Parser):
             return None
         return None
 
-    @_('expr PERIOD STARTINCLUDED')
-    def expr(self, p):
-        if isinstance(p.expr, tuple) and (len(p.expr) == 4):
-            (end0, low0, high1, end1) = p.expr
-            if end0 == '[':
-                return True
-            else:
-                return False
-        return False
+    @_('DOTYEARS')
+    def listSelect(self, p):
+        return 'years'
 
-    @_('expr PERIOD ENDINCLUDED')
-    def expr(self, p):
-        if isinstance(p.expr, tuple) and (len(p.expr) == 4):
-            (end0, low0, high1, end1) = p.expr
-            if end1 == ']':
-                return True
-            else:
-                return False
-        return False
+    @_('DOTMONTHS')
+    def listSelect(self, p):
+        return 'months'
 
-    @_('expr PERIOD TIMEOFFSET')
-    def expr(self, p):
-        if isinstance(p.expr, datetime.datetime):
-            if p.expr.tzinfo is None:
-                return None
-            return p.expr.utcoffset()
-        if isinstance(p.expr, datetime.time):
-            if p.expr.tzinfo == None:
-                return None
-            tmpDateTime = datetime.datetime.combine(datetime.date.today(), p.expr)
-            return tmpDateTime.utcoffset()
-        return None
+    @_('DOTDAYS')
+    def listSelect(self, p):
+        return 'days'
+
+    @_('DOTHOURS')
+    def listSelect(self, p):
+        return 'hours'
+
+    @_('DOTMINUTES')
+    def listSelect(self, p):
+        return 'minutes'
+
+    @_('DOTSECONDS')
+    def listSelect(self, p):
+        return 'seconds'
+
+    @_('DOTYEAR')
+    def listSelect(self, p):
+        return 'year'
+
+    @_('DOTMONTH')
+    def listSelect(self, p):
+        return 'month'
+
+    @_('DOTDAY')
+    def listSelect(self, p):
+        return 'day'
+
+    @_('DOTWEEKDAY')
+    def listSelect(self, p):
+        return 'weekday'
+
+    @_('DOTHOUR')
+    def listSelect(self, p):
+        return 'hour'
+
+    @_('DOTMINUTE')
+    def listSelect(self, p):
+        return 'minute'
+
+    @_('DOTSECOND')
+    def listSelect(self, p):
+        return 'second'
+
+    @_('DOTTIMEZONE')
+    def listSelect(self, p):
+        return 'timezone'
+
+    @_('DOTTIMEOFFSET')
+    def listSelect(self, p):
+        return 'time offset'
+
+    @_('DOTSTART')
+    def listSelect(self, p):
+        return 'start'
+
+    @_('DOTEND')
+    def listSelect(self, p):
+        return 'end'
+
+    @_('DOTSTARTINCLUDED')
+    def listSelect(self, p):
+        return 'start included'
+
+    @_('DOTENDINCLUDED')
+    def listSelect(self, p):
+        return 'end included'
 
     @_('PERIOD NAME')
     def listSelect(self, p):
@@ -880,7 +941,7 @@ class SFeelParser(Parser):
 
     @_('expr listSelect')
     def expr(self, p):
-        ''' select value(s) for name p.listSelect from a list of contexts '''
+        ''' select value(s) for name p.listSelect from a list/context/date/datetime/time/duration/range '''
         key = p.listSelect
         if isinstance(p.expr, list):
             retList = []
@@ -898,24 +959,24 @@ class SFeelParser(Parser):
         elif isinstance(p.expr, datetime.date):         # True for both dates and datetimes
             if type(p.expr) is datetime.datetime:           # Only true for datetimes
                 if key == 'year':
-                    return p.expr.year
+                    return float(p.expr.year)
                 elif key == 'month':
-                    return p.expr.month
+                    return float(p.expr.month)
                 elif key == 'day':
-                    return p.expr.day
+                    return float(p.expr.day)
                 elif key == 'weekday':
-                    return p.expr.weekday()
+                    return float(p.expr.weekday())
                 elif key == 'hour':
-                    return p.expr.hour
+                    return float(p.expr.hour)
                 elif key == 'minute':
-                    return p.expr.minute
+                    return float(p.expr.minute)
                 elif key == 'second':
-                    return p.expr.second
+                    return float(p.expr.second)
                 elif key == 'timezone':
                     if p.expr.tzinfo == None:
                         return None
-                    return p.expr.tzname()
-                elif key == 'time_offset':
+                    return str(p.expr.tzname())
+                elif key == 'time offset':
                     if p.expr.tzinfo == None:
                         return None
                     return p.expr.utcoffset()
@@ -923,13 +984,13 @@ class SFeelParser(Parser):
                     return None
             else:                                           # datetime.date
                 if key == 'year':
-                    return p.expr.year
+                    return float(p.expr.year)
                 elif key == 'month':
-                    return p.expr.month
+                    return float(p.expr.month)
                 elif key == 'day':
-                    return p.expr.day
+                    return float(p.expr.day)
                 elif key == 'weekday':
-                    return p.expr.weekday()
+                    return float(p.expr.weekday())
                 else:
                     return None
         elif isinstance(p.expr, datetime.time):
@@ -944,7 +1005,7 @@ class SFeelParser(Parser):
                     return None
                 tmpDateTime = datetime.datetime.combine(datetime.date.today(), p.expr)
                 return tmpDateTime.tzname()
-            elif key == 'time_offset':
+            elif key == 'time offset':
                 if p.expr.tzinfo == None:
                     return None
                 tmpDateTime = datetime.datetime.combine(datetime.date.today(), p.expr)
@@ -975,6 +1036,16 @@ class SFeelParser(Parser):
                 return low0
             elif key == 'end':
                 return high1
+            elif key == 'start included':
+                if end0 == '[':
+                    return True
+                else:
+                    return False
+            elif key == 'end included':
+                if end1 == ']':
+                    return True
+                else:
+                    return False
             else:
                 return None
         return None            
@@ -3324,42 +3395,42 @@ class SFeelParser(Parser):
         elif p.NAME.endswith('.year') and p.NAME[:-5] in self.names:
             value = self.names[p.NAME[:-5]]
             if isinstance(value, datetime.date) or isinstance(value, datetime.datetime):
-                return value.year
+                return float(value.year)
         elif p.NAME.endswith('.month') and p.NAME[:-6] in self.names:
             value = self.names[p.NAME[:-6]]
             if isinstance(value, datetime.date) or isinstance(value, datetime.datetime):
-                return value.month
+                return float(value.month)
         elif p.NAME.endswith('.day') and p.NAME[:-4] in self.names:
             value = self.names[p.NAME[:-4]]
             if isinstance(value, datetime.date) or isinstance(value, datetime.datetime):
-                return value.day
+                return float(value.day)
         elif p.NAME.endswith('.weekday') and p.NAME[:-8] in self.names:
             value = self.names[p.NAME[:-8]]
             if isinstance(value, datetime.date) or isinstance(value, datetime.datetime):
-                return value.weekday()
+                return float(value.weekday())
         elif p.NAME.endswith('.hour') and p.NAME[:-5] in self.names:
             value = self.names[p.NAME[:-5]]
             if isinstance(value, datetime.datetime) or isinstance(value, datetime.time):
-                return value.hour
+                return float(value.hour)
         elif p.NAME.endswith('.minute') and p.NAME[:-7] in self.names:
             value = self.names[p.NAME[:-7]]
             if isinstance(value, datetime.datetime) or isinstance(value, datetime.time):
-                return value.minute
+                return float(value.minute)
         elif p.NAME.endswith('.second') and p.NAME[:-7] in self.names:
             value = self.names[p.NAME[:-7]]
             if isinstance(value, datetime.datetime) or isinstance(value, datetime.time):
-                return value.second
+                return float(value.second)
         elif p.NAME.endswith('.timezone') and p.NAME[:-9] in self.names:
             value = self.names[p.NAME[:-9]]
             if isinstance(value, datetime.datetime):
                 if value.tzinfo == None:
                     return None
-                return value.tzname()
+                return str(value.tzname())
             elif isinstance(value, datetime.time):
                 if value.tzinfo == None:
                     return None
                 tmpDateTime = datetime.datetime.combine(datetime.date.today(), value)
-                return tmpDateTime.tzname()
+                return str(tmpDateTime.tzname())
         elif p.NAME.endswith('.time_offset') and p.NAME[:-12] in self.names:
             value = self.names[p.NAME[:-12]]
             if isinstance(value, datetime.datetime):
@@ -3374,32 +3445,32 @@ class SFeelParser(Parser):
         elif p.NAME.endswith('.days') and p.NAME[:-5] in self.names:
             value = self.names[p.NAME[:-5]]
             if isinstance(value, datetime.timedelta):
-                return int(ValuesView.total_seconds() / 60 / 60 / 24)
+                return float(value.total_seconds() / 60 / 60 / 24)
         elif p.NAME.endswith('.hours') and p.NAME[:-6] in self.names:
             value = self.names[p.NAME[:-6]]
             if isinstance(value, datetime.timedelta):
-                return int(value.total_seconds() / 60 / 60) % 24
+                return float(value.total_seconds() / 60 / 60) % 24
         elif p.NAME.endswith('.minutes') and p.NAME[:-8] in self.names:
             value = self.names[p.NAME[:-8]]
             if isinstance(value, datetime.timedelta):
-                return int(value.total_seconds() / 60) % 60
+                return float(value.total_seconds() / 60) % 60
         elif p.NAME.endswith('.seconds') and p.NAME[:-8] in self.names:
             value = self.names[p.NAME[:-8]]
             if isinstance(value, datetime.timedelta):
-                return value.total_seconds() % 60
+                return float(value.total_seconds() % 60)
         elif p.NAME.endswith('.years') and p.NAME[:-6] in self.names:
             value = self.names[p.NAME[:-6]]
             if isinstance(value, int):
-                return int(value / 12)
+                return float(value / 12)
         elif p.NAME.endswith('.months') and p.NAME[:-7] in self.names:
             value = self.names[p.NAME[:-7]]
             if isinstance(value, int):
-                return value % 12
+                return float(value % 12)
         elif p.NAME.endswith('.start') and p.NAME[:-6] in self.names:
             value = self.names[p.NAME[:-6]]
             if isinstance(value, tuple) and (len(value) == 4):
                 (end0, low0, high1, end1) = value
-                return low0
+                return float(low0)
         elif p.NAME.endswith('.start_included') and p.NAME[:-13] in self.names:
             value = self.names[p.NAME[:-13]]
             if isinstance(value, tuple) and (len(value) == 4):
@@ -3412,7 +3483,7 @@ class SFeelParser(Parser):
             value = self.names[p.NAME[:-4]]
             if isinstance(value, tuple) and (len(value) == 4):
                 (end0, low0, high1, end1) = value
-                return p.high1
+                return float(high1)
         elif p.NAME.endswith('.end_included') and p.NAME[:-11] in self.names:
             value = self.names[p.NAME[:-11]]
             if isinstance(value, tuple) and (len(value) == 4):
@@ -3451,8 +3522,8 @@ class SFeelParser(Parser):
     @_('DATE')
     def expr(self, p):
         ''' Convert string to datetime.date '''
-        thisDate = p.DATE
-        return self.dateFunc(thisDate)
+        thisDate = self.dateFunc(p.DATE)
+        return thisDate
 
     def dateFunc(self, thisDate):
         ''' Convert string to datetime.date '''
@@ -3658,6 +3729,7 @@ class SFeelParser(Parser):
         tokens = self.lexer.tokenize(text)
         yaccTokens = []
         for token in tokens:
+            # print('S-FEEL token', token)
             if token.type == 'ERROR':
                 lexErrors.append(token.value)
             else:

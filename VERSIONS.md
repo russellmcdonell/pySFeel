@@ -1,3 +1,7 @@
+### 1.3.6 - Another minor bug fix
+* Fixed typo in .days attribute of a data/time durations
+* Fixed priority bug for .day/.days etc.
+* Fixed workaround implemented in version 1.3.2 for 'start included', 'end included' and 'time offset'. Underscore nolonger required for these attributes.
 ### 1.3.5 - A minor bug fix release - released to PyPI
 * Tightened up is() function to disallow comparisions of ranges, Lists and Contexts
 * Fixed but in overlaps after() function when we have matching end points
