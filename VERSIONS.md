@@ -1,3 +1,5 @@
+### 1.3.7 - Bug fix - released to PyPI
+* Made arithmetic operators invalid in names
 ### 1.3.6 - Another minor bug fix
 * Fixed typo in .days attribute of a data/time durations
 * Fixed priority bug for .day/.days etc.

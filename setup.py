@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='pySFeel',
-    version='1.3.6',
+    version='1.3.7',
     author='Russell McDonell',
     author_email='russell.mcdonell@c-cost.com',
     description='An implementation of S-FEEL using SLY (lex and yacc for Python3)',
