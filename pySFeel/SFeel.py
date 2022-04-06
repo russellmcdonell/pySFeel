@@ -471,7 +471,11 @@ class SFeelParser(Parser):
                 while month > 12:                               # Bring month into range 1-12
                     year += 1
                     month -= 12
-                return (var0).replace(year=int(year), month=int(month))
+                try:
+                    newDate = (var0).replace(year=int(year), month=int(month))
+                except:
+                    newDate = (var0).replace(year=int(year), month=int(month), day=28)
+                return newDate
             else:
                 return None
         if isinstance(var1, datetime.date):                 # True for both dates and datetimes
@@ -486,7 +490,11 @@ class SFeelParser(Parser):
                 while month > 12:                           # Bring month into range 1-12
                     year += 1
                     month -= 12
-                return (var1).replace(year=int(year), month=int(month))
+                try:
+                    newDate = (var1).replace(year=int(year), month=int(month))
+                except:
+                    newDate = (var1).replace(year=int(year), month=int(month), day=28)
+                return newDate
             else:
                 return None
         if isinstance(var0, datetime.time) and isinstance(var1, datetime.timedelta):        # date or datetime plus days and time duration
@@ -533,7 +541,11 @@ class SFeelParser(Parser):
                 while month < 1:
                     year -= 1
                     month += 12
-                return (var0).replace(year=int(year), month=int(month))
+                try:
+                    newDate = (var0).replace(year=int(year), month=int(month))
+                except:
+                    newDate = (var0).replace(year=int(year), month=int(month), day=28)
+                return newDate
             else:
                 return None
         elif isinstance(var0, datetime.time):            # time minus time or days and time duration

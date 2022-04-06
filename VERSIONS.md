@@ -1,3 +1,5 @@
+### 1.3.8 - Fixed Feb 29 bug
+ - Addition and subtraction of years from a valid leap year date would fail
 ### 1.3.7 - Bug fix - released to PyPI
 * Made arithmetic operators invalid in names
 ### 1.3.6 - Another minor bug fix
