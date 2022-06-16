@@ -24,33 +24,33 @@ Data Types
 ----------
 pySFeel converts S-FEEL data into the nearest equivalent Python native data type.
 
-+--------------------------+-------------------------+
-|     S-Feel data type     | Python native data type |
-+==========================+=========================+
-|         number           |         float           |
-+--------------------------+--------------------------------+
-|         string           |             str                |
-+--------------------------+--------------------------------+
-|        boolean           |            bool                |
-+--------------------------+--------------------------------+
-|  days and time duration  |      datetime.timedelta        |
-+--------------------------+--------------------------------+
-| year and months duration |             int                |
-+--------------------------+--------------------------------+
-|        time              |        datetime.time           |
-+--------------------------+--------------------------------+
-|        date              |        datetime.date           |
-+--------------------------+--------------------------------+
-|   date and time          |      datetime.datetime         |
-+--------------------------+--------------------------------+
-|        List              |            list                |
-+--------------------------+--------------------------------+
-|      Context             |            dict                |
-+--------------------------+--------------------------------+
-|       Range              | tuple(end0, low0, high1, end1) |
-|                          | where end0 is '[' or '('       |
-|                          |   and end1 is ')' or ']'       |    
-+--------------------------+--------------------------------+
++--------------------------+-------------------------------------------------+
+|     S-Feel data type     |   Python native data type                       |
++==========================+=================================================+
+|         number           |            float                                |
++--------------------------+-------------------------------------------------+
+|         string           |             str                                 |
++--------------------------+-------------------------------------------------+
+|        boolean           |            bool                                 |
++--------------------------+-------------------------------------------------+
+|  days and time duration  |      datetime.timedelta                         |
++--------------------------+-------------------------------------------------+
+| year and months duration |             int                                 |
++--------------------------+-------------------------------------------------+
+|        time              |        datetime.time                            |
++--------------------------+-------------------------------------------------+
+|        date              |        datetime.date                            |
++--------------------------+-------------------------------------------------+
+|   date and time          |      datetime.datetime                          |
++--------------------------+-------------------------------------------------+
+|        List              |            list                                 |
++--------------------------+-------------------------------------------------+
+|      Context             |            dict                                 |
++--------------------------+-------------------------------------------------+
+|       Range              | tuple(end0, low0, high1, end1)                  |
++--------------------------+-------------------------------------------------+
+|                          | where end0 is '[' or '(' and end1 is ')' or ']' |    
++--------------------------+-------------------------------------------------+
 
 | Literal strings (@"PT5H") are implemented as both literal strings (@"PT5H") and as bare strings (PT5H).
 | @"PT5H" > @"PT4H" can be written as PT5H > PT4H and would return True
@@ -60,13 +60,10 @@ pySFeel converts S-FEEL data into the nearest equivalent Python native data type
 
 List and Context Filters
 ------------------------
-pySFeel supports List and Context filters with one deliberate deviation from the standard - the key word 'item' in a Context filters is **not** optional.
+pySFeel supports List and Context filters with one deviation from the standard - the dot operator requires the List to be enclosed in brackets.
 
-| [{x:1,y:2},{x:2,y:3}][x=1] is not valid (as x=1 is either True or False)
-| [{x:1,y:2},{x:2,y:3}][item x=1] is valid and will return {x:1,y:2}.
-
-| Similarly, fred.y is **not** the 'y' filter on the List of Contexts named 'fred' (as fred.y is a valid name).
-| However (fred).y is the 'y' filter on the list of Contexts named fred.
+| Hence, fred.y is **not** the 'y' filter on the List of Contexts named 'fred' (as fred.y is a valid name).
+| However (fred).y is the 'y' filter on the List of Contexts named fred.
 
 Assignment and Variable names
 -----------------------------
@@ -102,7 +99,7 @@ Usage
 
 Built-in Functions
 ------------------
-pySFeel has support all the standard FEEL built-in functions with some differences because pySFeel is a Python implementation.
+pySFeel has support all the standard FEEL built-in functions [except sort()] with some differences because pySFeel is a Python implementation.
 
 +-------------------------------+---------------------+---------------------------------------------------------------+
 | Name(paramters)               | Parameter Domain    | pySFeel implementation notes                                  |
@@ -153,7 +150,7 @@ pySFeel has support all the standard FEEL built-in functions with some differenc
 | upper case(string)            | string              |                                                               |
 +-------------------------------+---------------------+---------------------------------------------------------------+
 | lower case(string)            | string              |                                                               |
-+----------------------0--------+---------------------+---------------------------------------------------------------+
++-------------------------------+---------------------+---------------------------------------------------------------+
 | substring before              | string,string       |                                                               |
 | (string,match)                |                     |                                                               |
 +-------------------------------+---------------------+---------------------------------------------------------------+
@@ -230,7 +227,7 @@ pySFeel has support all the standard FEEL built-in functions with some differenc
 | product(list)                 | list is a list of   |                                                               |
 | product(N1,...,Nn)            | numbers. N1..Nn     |                                                               |
 |                               | are numbers         |                                                               |
-+------------------------------ +---------------------+---------------------------------------------------------------+
++-------------------------------+---------------------+---------------------------------------------------------------+
 | median(list)                  | list is a list of   |                                                               |
 | median(N1,...,Nn)             | numbers. N1..Nn     |                                                               |
 |                               | are numbers         |                                                               |
@@ -303,7 +300,7 @@ pySFeel has support all the standard FEEL built-in functions with some differenc
 | week of year(date)            | date, date and time |                                                               |
 +-------------------------------+---------------------+---------------------------------------------------------------+
 
-
+**Note:** the sort() function is not supported
 
 Indices and tables
 ------------------

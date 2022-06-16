@@ -2,11 +2,11 @@
 # SFeel.py
 # -----------------------------------------------------------------------------
 
-from enum import IntFlag
 from sly import Lexer, Parser
 import re
 import datetime
 import dateutil.parser, dateutil.tz
+import copy
 import math
 import statistics
 
@@ -39,7 +39,7 @@ class SFeelLexer(Lexer):
               LPAREN, RPAREN,
               LCURLY, RCURLY, COLON, DOTYEARS, DOTMONTHS, DOTDAYS, DOTHOURS, DOTMINUTES, DOTSECONDS,
               DOTYEAR, DOTMONTH, DOTDAY, DOTWEEKDAY, DOTHOUR, DOTMINUTE, DOTSECOND, DOTTIMEZONE, DOTTIMEOFFSET, DOTSTART, DOTEND, DOTSTARTINCLUDED, DOTENDINCLUDED, PERIOD,
-              IN, ITEM, ASSIGN
+              SOME, EVERY, SATISFIES, IN, ITEM, ASSIGN
             }
     ignore = '\u000A\u000B\u000C\u000D\u0009\u0020\u0085\u00A0\u1680\u180E\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u200B\u2028\u2029\u202F\u205F\u3000\uFEFF'
 
@@ -150,13 +150,16 @@ class SFeelLexer(Lexer):
     NAME['between'] = BETWEEN
     NAME['null'] = NULL
     NAME['item'] = ITEM
+    NAME['some'] = SOME
+    NAME['every'] = EVERY
+    NAME['satisfies'] = SATISFIES
 
     ATSTRING = r'@"(' + r"\\'" + r'|\\"|\\\\|\\n|\\r|\\t|\\u[0-9]{4}|[^"])*"'
     STRING = r'"(' + r"\\'" + r'|\\"|\\\\|\\n|\\r|\\t|\\u[0-9]{4}|[^"])*"'
     DATETIME = r'-?([1-9][0-9]{3,}|0[0-9]{3})-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T(([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\.[0-9]+)?|(24:00:00(\.0+)?))(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)|@[A-Za-z0-9_-]+/[A-Za-z0-9_-]+)?'
     DATE = r'([1-9][0-9]{3,}|0[0-9]{3})-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])(Z|(\+|-)(0[0-9]|1[0-3]):[0-5][0-9]|14:00)?'
     TIME = r'(([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\.[0-9]+)?|(24:00:00(\.0+)?))(Z|(\+|-)(0[0-9]|1[0-3]):[0-5][0-9]|14:00|@[A-Za-z0-9_-]+/[A-Za-z0-9_-]+)?'
-    NUMBER = r'\d+(\.(\d+|\s)){0,1}'
+    NUMBER = r'(\.\d+|\d+(\.(\d+|\s)){0,1})'
 
     # Special symbols
     ASSIGN = r'<-'
@@ -204,6 +207,9 @@ class SFeelLexer(Lexer):
     DOTSTART = r'\.start'
     DOTEND = r'\.end'
     PERIOD = r'\.'
+    SOME = r'some'
+    EVERY = r'every'
+    SATISFIES = r'satisfies'
     IN = r'in'
 
     # Ignored pattern
@@ -223,6 +229,7 @@ class SFeelParser(Parser):
     tokens = SFeelLexer.tokens
 
     precedence = (
+        ('left', NAME),
         ('left', EQUALS, NOTEQUALS, LTTHANEQUAL, GTTHANEQUAL, LTTHAN, GTTHAN),
         ('left', PLUS, MINUS),
         ('left', MULTIPY, DIVIDE),
@@ -234,8 +241,7 @@ class SFeelParser(Parser):
         ('left', DOTYEAR, DOTMONTH, DOTDAY, DOTWEEKDAY,DOTHOUR, DOTMINUTE, DOTSECOND, DOTTIMEZONE, DOTTIMEOFFSET, DOTSTART, DOTEND),
         ('left', PERIOD),
         ('left', LPAREN, RPAREN),
-        ('left', IN),
-        ('left', NAME)
+        ('left', SOME, EVERY, SATISFIES, IN)
         )
 
 
@@ -265,6 +271,152 @@ class SFeelParser(Parser):
     @_(NULL)
     def expr(self, p):
         return None
+
+    def someFunc(self, name0, thisList, name1, relop, thisValue):
+        # Some in a list of value, or a list of dictionaries
+        if not isinstance(thisList, list):
+            return None
+        if name0 == name1:
+            thisKey = None
+            isValues = True
+        elif name1.startswith(name0 + '.'):
+            thisKey = name1[len(name0) + 1:]
+            isValues = False
+        else:
+            return None
+        for i in range(len(thisList)):
+            if isValues:
+                if thisList[i] == thisValue:
+                    return True
+            else:
+                if not isinstance(thisList[i], dict):
+                    continue
+                if thisKey not in thisList[i].keys():
+                    continue
+                if relop == '=':
+                    if thisList[i][thisKey] == thisValue:
+                        return True
+                elif relop == '!=':
+                    if thisList[i][thisKey] != thisValue:
+                        return True
+                elif relop == '<':
+                    if thisList[i][thisKey] < thisValue:
+                        return True
+                elif relop == '>':
+                    if thisList[i][thisKey] > thisValue:
+                        return True
+                elif relop == '<=':
+                    if thisList[i][thisKey] <= thisValue:
+                        return True
+                elif relop == '>=':
+                    if thisList[i][thisKey] >= thisValue:
+                        return True
+                else:
+                    return None
+        return False
+
+    @_('SOME NAME IN expr SATISFIES NAME EQUALS expr')
+    def expr(self, p):
+        # Some in a list of value, or a list of dictionaries
+        return self.someFunc(p.NAME0, p.expr0, p.NAME1, p.EQUALS, p.expr1)
+
+    @_('SOME NAME IN expr SATISFIES NAME NOTEQUALS expr')
+    def expr(self, p):
+        # Some in a list of value, or a list of dictionaries
+        return self.someFunc(p.NAME0, p.expr0, p.NAME1, p.NOTEQUALS, p.expr1)
+
+    @_('SOME NAME IN expr SATISFIES NAME LTTHAN expr')
+    def expr(self, p):
+        # Some in a list of value, or a list of dictionaries
+        return self.someFunc(p.NAME0, p.expr0, p.NAME1, p.LTTHAN, p.expr1)
+
+    @_('SOME NAME IN expr SATISFIES NAME GTTHAN expr')
+    def expr(self, p):
+        # Some in a list of value, or a list of dictionaries
+        return self.someFunc(p.NAME0, p.expr0, p.NAME1, p.GTTHAN, p.expr1)
+
+    @_('SOME NAME IN expr SATISFIES NAME LTTHANEQUAL expr')
+    def expr(self, p):
+        # Some in a list of value, or a list of dictionaries
+        return self.someFunc(p.NAME0, p.expr0, p.NAME1, p.LTTHANEQUAL, p.expr1)
+
+    @_('SOME NAME IN expr SATISFIES NAME GTTHANEQUAL expr')
+    def expr(self, p):
+        # Some in a list of value, or a list of dictionaries
+        return self.someFunc(p.NAME0, p.expr0, p.NAME1, p.GTTHANEQUAL, p.expr1)
+
+    def everyFunc(self, name0, thisList, name1, relop, thisValue):
+        # Some in a list of value, or a list of dictionaries
+        if not isinstance(thisList, list):
+            return None
+        if name0 == name1:
+            thisKey = None
+            isValues = True
+        elif name1.startswith(name0 + '.'):
+            thisKey = name1[len(name0) + 1:]
+            isValues = False
+        else:
+            return None
+        for i in range(len(thisList)):
+            if isValues:
+                if thisList[i] != thisValue:
+                    return False
+            else:
+                if not isinstance(thisList[i], dict):
+                    return False
+                if thisKey not in thisList[i].keys():
+                    return False
+                if relop == '=':
+                    if thisList[i][thisKey] != thisValue:
+                        return False
+                elif relop == '!=':
+                    if thisList[i][thisKey] == thisValue:
+                        return False
+                elif relop == '<':
+                    if thisList[i][thisKey] >= thisValue:
+                        return False
+                elif relop == '>':
+                    if thisList[i][thisKey] <= thisValue:
+                        return False
+                elif relop == '<=':
+                    if thisList[i][thisKey] > thisValue:
+                        return False
+                elif relop == '>=':
+                    if thisList[i][thisKey] < thisValue:
+                        return False
+                else:
+                    return None
+        return True
+
+    @_('EVERY NAME IN expr SATISFIES NAME EQUALS expr')
+    def expr(self, p):
+        # Every in a list of value, or a list of dictionaries
+        return self.everyFunc(p.NAME0, p.expr0, p.NAME1, p.EQUALS, p.expr1)
+
+    @_('EVERY NAME IN expr SATISFIES NAME NOTEQUALS expr')
+    def expr(self, p):
+        # Every in a list of value, or a list of dictionaries
+        return self.everyFunc(p.NAME0, p.expr0, p.NAME1, p.NOTEQUALS, p.expr1)
+
+    @_('EVERY NAME IN expr SATISFIES NAME LTTHAN expr')
+    def expr(self, p):
+        # Every in a list of value, or a list of dictionaries
+        return self.everyFunc(p.NAME0, p.expr0, p.NAME1, p.LTTHAN, p.expr1)
+
+    @_('EVERY NAME IN expr SATISFIES NAME GTTHAN expr')
+    def expr(self, p):
+        # Every in a list of value, or a list of dictionaries
+        return self.everyFunc(p.NAME0, p.expr0, p.NAME1, p.GTTHAN, p.expr1)
+
+    @_('EVERY NAME IN expr SATISFIES NAME LTTHANEQUAL expr')
+    def expr(self, p):
+        # Every in a list of value, or a list of dictionaries
+        return self.everyFunc(p.NAME0, p.expr0, p.NAME1, p.LTTHANEQUAL, p.expr1)
+
+    @_('EVERY NAME IN expr SATISFIES NAME GTTHANEQUAL expr')
+    def expr(self, p):
+        # Every in a list of value, or a list of dictionaries
+        return self.everyFunc(p.NAME0, p.expr0, p.NAME1, p.GTTHANEQUAL, p.expr1)
 
     @_('expr IN expr')
     def expr(self, p):
@@ -719,158 +871,186 @@ class SFeelParser(Parser):
     def expr(self, p):
         return []
         
-    @_('LBRACKET expr RBRACKET')
+    @_('expr LBRACKET ITEM NAME LTTHANEQUAL expr RBRACKET')
     def listFilter(self, p):
-        return p.expr
+        return (p.expr0, p.NAME, p.LTTHANEQUAL, p.expr1)
 
-    @_('LBRACKET ITEM NAME LTTHANEQUAL expr RBRACKET')
+    @_('expr LBRACKET NAME LTTHANEQUAL expr RBRACKET')
     def listFilter(self, p):
-        return (p.NAME, p.LTTHANEQUAL, p.expr)
+        return (p.expr0, p.NAME, p.LTTHANEQUAL, p.expr1)
 
-    @_('LBRACKET ITEM LTTHANEQUAL expr RBRACKET')
+    @_('expr LBRACKET ITEM LTTHANEQUAL expr RBRACKET')
     def listFilter(self, p):
-        return (p.LTTHANEQUAL, p.expr)
+        return (p.expr0, p.LTTHANEQUAL, p.expr1)
 
-    @_('LBRACKET LTTHANEQUAL expr RBRACKET')
+    @_('expr LBRACKET LTTHANEQUAL expr RBRACKET')
     def listFilter(self, p):
-        return (p.LTTHANEQUAL, p.expr)
+        return (p.expr0, p.LTTHANEQUAL, p.expr1)
 
-    @_('LBRACKET ITEM NAME LTTHAN expr RBRACKET')
+    @_('expr LBRACKET ITEM NAME LTTHAN expr RBRACKET')
     def listFilter(self, p):
-        return (p.NAME, p.LTTHAN, p.expr)
+        return (p.expr0, p.NAME, p.LTTHAN, p.expr1)
 
-    @_('LBRACKET ITEM LTTHAN expr RBRACKET')
+    @_('expr LBRACKET NAME LTTHAN expr RBRACKET')
     def listFilter(self, p):
-        return (p.LTTHAN, p.expr)
+        return (p.expr0, p.NAME, p.LTTHAN, p.expr1)
 
-    @_('LBRACKET LTTHAN expr RBRACKET')
+    @_('expr LBRACKET ITEM LTTHAN expr RBRACKET')
     def listFilter(self, p):
-        return (p.LTTHAN, p.expr)
+        return (p.expr0, p.LTTHAN, p.expr1)
 
-    @_('LBRACKET ITEM NAME GTTHANEQUAL expr RBRACKET')
+    @_('expr LBRACKET LTTHAN expr RBRACKET')
     def listFilter(self, p):
-        return (p.NAME, p.GTTHANEQUAL, p.expr)
+        return (p.expr0, p.LTTHAN, p.expr1)
 
-    @_('LBRACKET ITEM GTTHANEQUAL expr RBRACKET')
+    @_('expr LBRACKET ITEM NAME GTTHANEQUAL expr RBRACKET')
     def listFilter(self, p):
-        return (p.GTTHANEQUAL, p.expr)
+        return (p.expr0, p.NAME, p.GTTHANEQUAL, p.expr1)
 
-    @_('LBRACKET GTTHANEQUAL expr RBRACKET')
+    @_('expr LBRACKET NAME GTTHANEQUAL expr RBRACKET')
     def listFilter(self, p):
-        return (p.GTTHANEQUAL, p.expr)
+        return (p.expr0, p.NAME, p.GTTHANEQUAL, p.expr1)
 
-    @_('LBRACKET ITEM NAME GTTHAN expr RBRACKET')
+    @_('expr LBRACKET ITEM GTTHANEQUAL expr RBRACKET')
     def listFilter(self, p):
-        return (p.NAME, p.GTTHAN, p.expr)
+        return (p.expr0, p.GTTHANEQUAL, p.expr1)
 
-    @_('LBRACKET ITEM GTTHAN expr RBRACKET')
+    @_('expr LBRACKET GTTHANEQUAL expr RBRACKET')
     def listFilter(self, p):
-        return (p.GTTHAN, p.expr)
+        return (p.expr0, p.GTTHANEQUAL, p.expr1)
 
-    @_('LBRACKET GTTHAN expr RBRACKET')
+    @_('expr LBRACKET ITEM NAME GTTHAN expr RBRACKET')
     def listFilter(self, p):
-        return (p.GTTHAN, p.expr)
+        return (p.expr0, p.NAME, p.GTTHAN, p.expr1)
 
-    @_('LBRACKET ITEM NAME EQUALS expr RBRACKET')
+    @_('expr LBRACKET NAME GTTHAN expr RBRACKET')
     def listFilter(self, p):
-        return (p.NAME, p.EQUALS, p.expr)
+        return (p.expr0, p.NAME, p.GTTHAN, p.expr1)
 
-    @_('LBRACKET ITEM EQUALS expr RBRACKET')
+    @_('expr LBRACKET ITEM GTTHAN expr RBRACKET')
     def listFilter(self, p):
-        return (p.EQUALS, p.expr)
+        return (p.expr0, p.GTTHAN, p.expr1)
 
-    @_('LBRACKET EQUALS expr RBRACKET')
+    @_('expr LBRACKET GTTHAN expr RBRACKET')
     def listFilter(self, p):
-        return (p.EQUALS, p.expr)
+        return (p.expr0, p.GTTHAN, p.expr1)
 
-    @_('LBRACKET ITEM NAME NOTEQUALS expr RBRACKET')
+    @_('expr LBRACKET ITEM NAME EQUALS expr RBRACKET')
     def listFilter(self, p):
-        return (p.NAME, p.NOTEQUALS, p.expr)
+        return (p.expr0, p.NAME, p.EQUALS, p.expr1)
 
-    @_('LBRACKET ITEM NOTEQUALS expr RBRACKET')
+    @_('expr LBRACKET NAME EQUALS expr RBRACKET')
     def listFilter(self, p):
-        return (p.NOTEQUALS, p.expr)
+        return (p.expr0, p.NAME, p.EQUALS, p.expr1)
 
-    @_('LBRACKET NOTEQUALS expr RBRACKET')
+    @_('expr LBRACKET ITEM EQUALS expr RBRACKET')
     def listFilter(self, p):
-        return (p.NOTEQUALS, p.expr)
+        return (p.expr0, p.EQUALS, p.expr1)
 
-    @_('expr listFilter')
+    @_('expr LBRACKET EQUALS expr RBRACKET')
+    def listFilter(self, p):
+        return (p.expr0, p.EQUALS, p.expr1)
+
+    @_('expr LBRACKET ITEM NAME NOTEQUALS expr RBRACKET')
+    def listFilter(self, p):
+        return (p.expr0, p.NAME, p.NOTEQUALS, p.expr1)
+
+    @_('expr LBRACKET NAME NOTEQUALS expr RBRACKET')
+    def listFilter(self, p):
+        return (p.expr0, p.NAME, p.NOTEQUALS, p.expr1)
+
+    @_('expr LBRACKET ITEM NOTEQUALS expr RBRACKET')
+    def listFilter(self, p):
+        return (p.expr0, p.NOTEQUALS, p.expr1)
+
+    @_('expr LBRACKET NOTEQUALS expr RBRACKET')
+    def listFilter(self, p):
+        return (p.expr0, p.NOTEQUALS, p.expr1)
+
+    @_('listFilter')
     def expr(self, p):
         ''' select items from a list '''
-        if isinstance(p.expr, list):
-            if isinstance(p.listFilter, float):     # a specific element from the list [...][n]
-                if len(p.expr) < int(p.listFilter):
-                    return None
-                if int(p.listFilter) < 1:
-                    return None
-                return p.expr[int(p.listFilter) - 1]
-            if isinstance(p.listFilter, tuple):
-                if len(p.listFilter) == 2:          # specific items from a list of numbers or strings
-                    (equality, value) = p.listFilter
-                    retList = []
-                    for i in range(len(p.expr)):
-                        if (isinstance(p.expr[i], list)) or (isinstance(p.expr[i], dict)):
-                            continue
-                        item = p.expr[i]
-                        if item is None:
-                            continue
-                        if equality == '>=':
-                            if item >= value:
-                                retList.append(item)
-                        elif equality == '>':
-                            if item > value:
-                                retList.append(item)
-                        elif equality == '<=':
-                            if item <= value:
-                                retList.append(item)
-                        elif equality == '<':
-                            if item < value:
-                                retList.append(item)
-                        elif equality == '=':
-                            if item == value:
-                                retList.append(item)
-                        elif equality == '!=':
-                            if item != value:
-                                retList.append(item)
-                        else:
-                            return None
-                    return retList
-                elif len(p.listFilter) == 3:    # specific things from a list of contexts
-                    (key, equality, value) = p.listFilter
-                    retList = []
-                    for i in range(len(p.expr)):
-                        if not isinstance(p.expr[i], dict):
-                            continue
-                        if key in p.expr[i]:
-                            item = p.expr[i][key]
-                            if item is None:
-                                continue
-                            if equality == '>=':
-                                if item >= value:
-                                    retList.append(p.expr[i])
-                            elif equality == '>':
-                                if item > value:
-                                    retList.append(p.expr[i])
-                            elif equality == '<=':
-                                if item <= value:
-                                    retList.append(p.expr[i])
-                            elif equality == '<':
-                                if item < value:
-                                    retList.append(p.expr[i])
-                            elif equality == '=':
-                                if item == value:
-                                    retList.append(p.expr[i])
-                            elif equality == '!=':
-                                if item != value:
-                                    retList.append(p.expr[i])
-                            else:
-                                return None
-                    return retList
+        if not isinstance(p.listFilter, tuple):
+            return None
+        if len(p.listFilter) == 3:          # specific items from a list of numbers or strings
+            (thisList, equality, value) = p.listFilter
+            if not isinstance(thisList, list):
+                return None
+            retList = []
+            for i in range(len(thisList)):
+                if (isinstance(thisList[i], list)) or (isinstance(thisList[i], dict)):
+                    continue
+                item = thisList[i]
+                if item is None:
+                    continue
+                if equality == '>=':
+                    if item >= value:
+                        retList.append(item)
+                elif equality == '>':
+                    if item > value:
+                        retList.append(item)
+                elif equality == '<=':
+                    if item <= value:
+                        retList.append(item)
+                elif equality == '<':
+                    if item < value:
+                        retList.append(item)
+                elif equality == '=':
+                    if item == value:
+                        retList.append(item)
+                elif equality == '!=':
+                    if item != value:
+                        retList.append(item)
                 else:
                     return None
+            return retList
+        elif len(p.listFilter) == 4:    # specific things from a list of contexts
+            (thisList, key, equality, value) = p.listFilter
+            if not isinstance(thisList, list):
+                return None
+            retList = []
+            for i in range(len(thisList)):
+                if not isinstance(thisList[i], dict):
+                    continue
+                if key in thisList[i]:
+                    item = thisList[i][key]
+                    if item is None:
+                        continue
+                    if equality == '>=':
+                        if item >= value:
+                            retList.append(thisList[i])
+                    elif equality == '>':
+                        if item > value:
+                            retList.append(thisList[i])
+                    elif equality == '<=':
+                        if item <= value:
+                            retList.append(thisList[i])
+                    elif equality == '<':
+                        if item < value:
+                            retList.append(thisList[i])
+                    elif equality == '=':
+                        if item == value:
+                            retList.append(thisList[i])
+                    elif equality == '!=':
+                        if item != value:
+                            retList.append(thisList[i])
+                    else:
+                        return None
+            return retList
+        else:
             return None
-        return None
+
+    @_('expr LBRACKET expr RBRACKET')
+    def expr(self, p):
+        if not isinstance(p.expr0, list):
+            return None
+        if not isinstance(p.expr1, float):
+            return None
+        if len(p.expr0) < int(p.expr1):
+            return None
+        if int(p.expr1) < 1:
+            return None
+        return p.expr0[int(p.expr1) - 1]
 
     @_('DOTYEARS')
     def listSelect(self, p):
@@ -1076,7 +1256,7 @@ class SFeelParser(Parser):
         try:
             return x0 <= x1
         except:
-            False
+            return False
 
     @_('expr LTTHAN expr')
     def expr(self, p):
@@ -1091,7 +1271,7 @@ class SFeelParser(Parser):
         try:
             return x0 < x1
         except:
-            False
+            return False
 
     @_('expr GTTHANEQUAL expr')
     def expr(self, p):
@@ -1106,7 +1286,7 @@ class SFeelParser(Parser):
         try:
             return x0 >= x1
         except:
-            False
+            return False
 
     @_('expr GTTHAN expr')
     def expr(self, p):
@@ -1137,18 +1317,36 @@ class SFeelParser(Parser):
         if (isinstance(expr0, list) and (len(expr0) == 1)):
             if (isinstance(expr1, list) and (len(expr1) == 1)):
                 if (isinstance(p.andExpr, list) and (len(p.andExpr) == 1)):
-                    return (expr0[0] > expr1[0]) and (expr0[0] < p.andExpr[0])
+                    try:
+                        return (expr0[0] > expr1[0]) and (expr0[0] < p.andExpr[0])
+                    except:
+                        return None
             else:
-                    return (expr0[0] > expr1[0]) and (expr0[0] < p.andExpr)
+                    try:
+                        return (expr0[0] > expr1[0]) and (expr0[0] < p.andExpr)
+                    except:
+                        return None
         elif (isinstance(expr1, list) and (len(expr1) == 1)):
             if (isinstance(p.andExpr, list) and (len(p.andExpr) == 1)):
-                return (expr0 > expr1[0]) and (expr0 < p.andExpr[0])
+                try:
+                    return (expr0 > expr1[0]) and (expr0 < p.andExpr[0])
+                except:
+                    return None
             else:
-                return (expr0 > expr1[0]) and (expr0 < p.andExpr)
+                try:
+                    return (expr0 > expr1[0]) and (expr0 < p.andExpr)
+                except:
+                    return None
         elif (isinstance(p.andExpr, list) and (len(p.andExpr) == 1)):
-            return (expr0 > expr1) and (expr0 < p.andExpr[0])
+            try:
+                return (expr0 > expr1) and (expr0 < p.andExpr[0])
+            except:
+                return None
         else:
-            return (expr0 > expr1) and (expr0 < p.andExpr)
+            try:
+                return (expr0 > expr1) and (expr0 < p.andExpr)
+            except:
+                return None
 
     @_('expr andExpr')
     def expr(self, p):
@@ -1201,12 +1399,12 @@ class SFeelParser(Parser):
 
     @_('listPart COMMA expr')
     def listPart(self, p):
-        if isinstance(p.expr, list):
+        if isinstance(p.expr, list):        # A list
             if (len(p.expr) > 0):
                 retval = p.listPart
                 retval.append(p.expr)
                 return retval
-            else:
+            else:                           # A list of only 1 element is treated as value, not a list
                  return p.listPart + p.expr
         else:
             return p.listPart + [p.expr]
@@ -1306,15 +1504,21 @@ class SFeelParser(Parser):
     @_('TIMEFUNC expr COMMA expr COMMA expr RPAREN')
     def expr(self, p):
         ''' Convert hour, minute, second into datetime.time '''
+        if not isinstance(p.expr0, float):
+            return None
+        if not isinstance(p.expr1, float):
+            return None
         hour = int(p.expr0)
         min = int(p.expr1)
-        sec = int(p.expr2)
-        while sec < 0:
-            sec += 60
+        sec = p.expr2
+        while sec < 0.0:
+            sec += 60.0
             min -= 1
-        while sec > 59:
-            sec -= 60
+        while sec >= 60.0:
+            sec -= 60.0
             min += 1
+        microSeconds = int((sec - int(sec)) * 1000000)
+        sec = int(sec)
         while min < 0:
             min += 60
             hour -= 1
@@ -1323,22 +1527,30 @@ class SFeelParser(Parser):
             hour += 1
         hour %= 24
         try:
-            return datetime.time(hour=int(hour), minute=int(min), second=int(sec))
+            return datetime.time(hour=int(hour), minute=int(min), second=int(sec), microsecond=int(microSeconds))
         except:
             return None
 
     @_('TIMEFUNC expr COMMA expr COMMA expr COMMA expr RPAREN')
     def expr(self, p):
         ''' Convert hour, minute, second, offset into datetime.time '''
+        if not isinstance(p.expr0, float):
+            return None
+        if not isinstance(p.expr1, float):
+            return None
+        if not isinstance(p.expr2, float):
+            return None
         hour = int(p.expr0)
         min = int(p.expr1)
-        sec = int(p.expr2)
-        while sec < 0:
-            sec += 60
+        sec = p.expr2
+        while sec < 0.0:
+            sec += 60.0
             min -= 1
-        while sec > 59:
-            sec -= 60
+        while sec >= 60.0:
+            sec -= 60.0
             min += 1
+        microSeconds = int((sec - int(sec)) * 1000000)
+        sec = int(sec)
         while min < 0:
             min += 60
             hour -= 1
@@ -1346,7 +1558,7 @@ class SFeelParser(Parser):
             min -= 60
             hour += 1
         hour %= 24
-        thisTime = '%02d:%02d:%02d' % (hour, min, sec)
+        thisTime = '%02d:%02d:%02d.%06d' % (hour, min, sec, microSeconds)
         if isinstance(p.expr3, datetime.timedelta):
             offset = p.expr3.total_seconds()
             if offset > 0:
@@ -1446,11 +1658,20 @@ class SFeelParser(Parser):
             if len(parts) > 2:
                 return None
             elif len(parts) == 2:
-                return float(parts[0]) + float(parts[1])/10.0
+                try:
+                    return float(parts[0]) + float(parts[1])/10.0
+                except:
+                    return None
             else:
-                return float(number)
+                try:
+                    return float(number)
+                except:
+                    return None
         else:
-            return float(number)
+            try:
+                return float(number)
+            except:
+                return None
 
     @_('STRINGFUNC expr RPAREN')
     def expr(self, p):
@@ -1463,7 +1684,10 @@ class SFeelParser(Parser):
             else:
                 return 'false'
         if isinstance(p.expr, float):
-            return str(p.expr)
+            if float(int(p.expr)) == p.expr:
+                return str(int(p.expr))
+            else:
+                return str(p.expr)
         if isinstance(p.expr, str):
             return p.expr
         if isinstance(p.expr, datetime.date):         # True for both dates and datetimes
@@ -1944,7 +2168,7 @@ class SFeelParser(Parser):
         ''' uppercase of a string'''
         if not isinstance(p.expr, str):
             return None
-        return p.expr.upper()
+        return copy.copy(p.expr.upper())
 
     @_('LOWERCASEFUNC expr RPAREN')
     def expr(self, p):
@@ -1998,8 +2222,8 @@ class SFeelParser(Parser):
         if 'x' in p.expr3:
             reFlags += re.X
         replace = p.expr2
-        replace = re.sub(pattern=r'\$(\d+)', repl=r'\\\1', string=replace)    # Convert SFEEL regular expressions to Python
-        return re.sub(pattern=p.expr1, repl=replace, string=p.expr0, flags=reFlags)
+        replace = re.sub(pattern=r'\$(\d+)', repl=lambda x: '\\' + str(int(x.group(1)) + 1), string=replace)    # Convert SFEEL regular expressions to Python
+        return re.sub(pattern=r'(' + p.expr1 + r')', repl=replace, string=p.expr0, flags=reFlags)
 
     @_('REPLACEFUNC expr COMMA expr COMMA expr RPAREN')
     def expr(self, p):
@@ -2012,8 +2236,8 @@ class SFeelParser(Parser):
             return None
         reFlags = 0
         replace = p.expr2
-        replace = re.sub(pattern=r'\$(\d+)', repl=r'\\\1', string=replace)    # Convert SFEEL regular expressions to Python
-        return re.sub(pattern=p.expr1, repl=replace, string=p.expr0, flags=reFlags)
+        replace = re.sub(pattern=r'\$(\d+)', repl=lambda x: '\\' + str(int(x.group(1)) + 1), string=replace)    # Convert SFEEL regular expressions to Python
+        return re.sub(pattern=r'(' + p.expr1 + r')', repl=replace, string=p.expr0, flags=reFlags)
 
     @_('CONTAINSFUNC expr COMMA expr RPAREN')
     def expr(self, p):
@@ -2102,6 +2326,7 @@ class SFeelParser(Parser):
         return float(len(p.expr))
 
     def minFunc(self, thisList):
+        # thisList must be a list of compariable items
         minValue = None
         for i in range(len(thisList)):
             if minValue is None:
@@ -2131,6 +2356,7 @@ class SFeelParser(Parser):
         return self.minFunc(thisList)
 
     def maxFunc(self, thisList):
+        # thisList must be a list of comparable items
         maxValue = None
         for i in range(len(thisList)):
             if maxValue is None:
@@ -2160,6 +2386,7 @@ class SFeelParser(Parser):
         return self.maxFunc(thisList)
 
     def sumFunc(self, thisList):
+        # thisList must be a list of floats
         sumValue = 0.0
         if len(thisList) == 0:
             return None
@@ -2188,6 +2415,7 @@ class SFeelParser(Parser):
         return self.sumFunc(thisList)
 
     def mean(self, thisList):
+        # thisList must be a list of floats (statistics.fmean() fails if it isn't)
         if len(thisList) == 0:
             return None
         try:
@@ -2214,6 +2442,7 @@ class SFeelParser(Parser):
         return self.mean(thisList)
 
     def allFunc(self, thisList):
+        # thisList must be a list of booleans - True if nothing is False
         if len(thisList) == 0:
             return True
         for i in range(len(thisList)):
@@ -2245,6 +2474,7 @@ class SFeelParser(Parser):
         return self.allFunc(thisList)
 
     def anyFunc(self, thisList):
+        # thisList must be a list of booleans - True if nothing is False
         if len(thisList) == 0:
             return False
         for i in range(len(thisList)):
@@ -2284,26 +2514,18 @@ class SFeelParser(Parser):
             return None
         if not isinstance(p.expr2, float):
             return None
-        start = int(p.expr1) - 1
+        if p.expr1 < 0:
+            start = len(p.expr0) + int(p.expr1)
+        else:
+            start = int(p.expr1) - 1
         length = int(p.expr2)
         if start >= 0:
-            if start + length < len(p.expr0):
+            if start + length <= len(p.expr0):
                 return p.expr0[start:start + length]
-            elif start + length == len(p.expr0):
-                return p.expr0[start:]
             else:
                 return None
         else:
-            if abs(start) > len(p.expr0):
-                return None
-            if abs(start) < length:
-                return None
-            if start + length > 0:
-                return p.expr0[start:start + length]
-            elif start + length == 0:
-                return p.expr0[start:]
-            else:
-                return None
+            return None
 
     @_('SUBLISTFUNC expr COMMA expr RPAREN')
     def expr(self, p):
@@ -2312,8 +2534,11 @@ class SFeelParser(Parser):
             return None
         if not isinstance(p.expr1, float):
             return None
-        start = int(p.expr1) - 1
-        if abs(start) < len(p.expr0):
+        if p.expr1 < 0:
+            start = len(p.expr0) + int(p.expr1)
+        else:
+            start = int(p.expr1) - 1
+        if (start >= 0) and (start < len(p.expr0)):
             return p.expr0[start:]
         else:
             return None
@@ -2328,7 +2553,7 @@ class SFeelParser(Parser):
 
     @_('appendStart listPart RPAREN')
     def expr(self, p):
-        return p.appendStart + p.listPart
+        return copy.copy(p.appendStart) + p.listPart
 
     @_('appendStart RPAREN')
     def expr(self, p):
@@ -2337,17 +2562,23 @@ class SFeelParser(Parser):
     @_('CONCATENATEFUNC expr')
     def concatenateStart(self, p):
         ''' concatenate lists '''
+        # p.expr must be a list
         if isinstance(p.expr, list):
             return p.expr
         else:
-            return [p.expr]
+            return None
 
     @_('concatenateStart listPart RPAREN')
     def expr(self, p):
-        retval = p.concatenateStart
+        if p.concatenateStart is None:
+            return None
+        thisList = copy.copy(p.concatenateStart)
         for i in range(len(p.listPart)):
-            retval += p.listPart[i]
-        return retval
+            if isinstance(p.listPart[i], list):
+                thisList += p.listPart[i]
+            else:
+                return None
+        return thisList
 
     @_('concatenateStart RPAREN')
     def expr(self, p):
@@ -2365,8 +2596,9 @@ class SFeelParser(Parser):
             return None
         if insertAt > len(p.expr0):
             return None
-        p.expr0.insert(insertAt, p.expr2)
-        return p.expr0
+        retval = copy.copy(p.expr0)
+        retval.insert(insertAt, p.expr2)
+        return retval
 
     @_('REMOVEFUNC expr COMMA expr RPAREN')
     def expr(self, p):
@@ -2392,7 +2624,7 @@ class SFeelParser(Parser):
         ''' reverse a list '''
         if not isinstance(p.expr, list):
             return None
-        newList = p.expr[:]
+        newList = copy.copy(p.expr[:])
         newList.reverse()
         return newList
 
@@ -2407,37 +2639,36 @@ class SFeelParser(Parser):
                 newList.append(i + 1)
         return newList
 
-    def unionFunc(self, thisList):
-        newList = []
-        for i in range(len(thisList)):
-            if thisList[i] not in newList:
-                newList.append(thisList[i])
-        return newList
-
     @_('UNIONFUNC expr')
     def unionStart(self, p):
         ''' union lists '''
+        # p.expr must be a list
         if isinstance(p.expr, list):
             return p.expr
         else:
-            return [p.expr]
+            return None
 
     @_('unionStart listPart RPAREN')
     def expr(self, p):
+        # p.unionStart must be a list and p.listPart must be a list of lists
+        if p.unionStart is None:
+            return None
         retval = []
         for i in range(len(p.unionStart)):
             if p.unionStart[i] not in retval:
                 retval.append(p.unionStart[i])
         for i in range(len(p.listPart)):
-            for j in range(len(p.listPart[i])):
-                if p.listPart[i][j] not in retval:
-                    retval.append(p.listPart[i][j])
+            if isinstance(p.listPart[i], list):
+                for j in range(len(p.listPart[i])):
+                    if p.listPart[i][j] not in retval:
+                        retval.append(p.listPart[i][j])
+            else:
+                return None
         return retval
 
     @_('unionStart RPAREN')
     def expr(self, p):
-        thisList = p.unionStart
-        return self.unionFunc(thisList)
+        return p.unionStart
 
     @_('DISTINCTVALUESFUNC expr RPAREN')
     def expr(self, p):
@@ -2468,6 +2699,7 @@ class SFeelParser(Parser):
         return newList
 
     def product(self, thisList):
+        # thisList must be a list of floats
         product = 1.0
         for i in range(len(thisList)):
             if not isinstance(thisList[i], float):
@@ -2494,6 +2726,11 @@ class SFeelParser(Parser):
         return self.product(thisList)
 
     def median(self, thisList):
+        # thisList must be a llist of floats (otherwise statistice.median() will fail)
+        if not isinstance(thisList, list):
+            return None
+        if len(thisList) == 0:
+            return None
         try:
             return float(statistics.median(thisList))
         except:
@@ -2518,6 +2755,11 @@ class SFeelParser(Parser):
         return self.median(thisList)
 
     def stddev(self, thisList):
+        # thisList must be a list of floats (otherwise statistics.stddev() will fail)
+        if not isinstance(thisList, list):
+            return None
+        if len(thisList) == 0:
+            return None
         try:
             return float(statistics.stdev(thisList))
         except:
@@ -2542,12 +2784,20 @@ class SFeelParser(Parser):
         return self.stddev(thisList)
 
     def mode(self, thisList):
+        # thisList must be a list of floats (otherwise statistics.multimode() will fail)
+        if not isinstance(thisList, list):
+            return None
+        if len(thisList) == 0:
+            return []
         try:
             thisMode = statistics.multimode(thisList)
         except:
             return None
         if isinstance(thisMode, list):
-            return sorted(thisMode)
+            try:
+                return sorted(thisMode)
+            except:
+                return thisMode
         else:
             return thisMode
 
@@ -2585,14 +2835,20 @@ class SFeelParser(Parser):
         ''' floor of a number '''
         if not isinstance(p.expr, float):
             return None
-        return float(math.floor(p.expr))
+        try:
+            return float(math.floor(p.expr))
+        except:
+            return None
         
     @_('CEILINGFUNC expr RPAREN')
     def expr(self, p):
         ''' ceiling of a number '''
         if not isinstance(p.expr, float):
             return None
-        return float(math.ceil(p.expr))
+        try:
+            return float(math.ceil(p.expr))
+        except:
+            return None
         
     @_('ABSFUNC expr RPAREN')
     def expr(self, p):
@@ -2608,28 +2864,40 @@ class SFeelParser(Parser):
             return None
         if not isinstance(p.expr1, float):
             return None
-        return float(p.expr0 % p.expr1)
+        try:
+            return float(p.expr0 % p.expr1)
+        except:
+            return None
 
     @_('SQRTFUNC expr RPAREN')
     def expr(self, p):
         ''' absolute of a number '''
         if not isinstance(p.expr, float):
             return None
-        return float(math.sqrt(p.expr))
+        try:
+            return float(math.sqrt(p.expr))
+        except:
+            return None
         
     @_('LOGFUNC expr RPAREN')
     def expr(self, p):
         ''' log of a number '''
         if not isinstance(p.expr, float):
             return None
-        return float(math.log(p.expr))
+        try:
+            return float(math.log(p.expr))
+        except:
+            return None
         
     @_('EXPFUNC expr RPAREN')
     def expr(self, p):
         ''' exponential of a number '''
         if not isinstance(p.expr, float):
             return None
-        return float(math.exp(p.expr))
+        try:
+            return float(math.exp(p.expr))
+        except:
+            return None
         
     @_('ODDFUNC expr RPAREN')
     def expr(self, p):
@@ -2831,11 +3099,19 @@ class SFeelParser(Parser):
             return None
         months = (p.expr1.year - p.expr0.year) * 12
         months += p.expr1.month - p.expr0.month
-        if p.expr1.day < p.expr0.day:
-            if p.expr1 > p.expr0:
+        if p.expr1.year > p.expr0.year:     # from < to
+            if p.expr1.day < p.expr0.day:
                 months -= 1
-            else:
-                months += 1
+        elif p.expr1.year == p.expr0.year:
+            if p.expr1.month > p.expr0.month:       # from < to
+                if p.expr1.day < p.expr0.day:
+                    months -= 1
+            elif p.expr1.month < p.expr0.month:     # to < from
+                if p.expr1.day > p.expr0.day:
+                    months -= 1
+        else:                               # to < from
+            if p.expr1.day > p.expr0.day:
+                months -= 1
         return int(months)
 
 
@@ -3700,7 +3976,10 @@ class SFeelParser(Parser):
 
     @_('NUMBER')
     def expr(self, p):
-        return float(p.NUMBER)
+        try:
+            return float(p.NUMBER)
+        except:
+            return None
 
     def error(self, p):
         if p:

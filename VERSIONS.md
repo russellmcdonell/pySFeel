@@ -1,4 +1,16 @@
-### 1.3.8 - Fixed Feb 29 bug
+### 1.3.9 - Fixed bugs found when testing with tck-DMN - released to PyPI
+ - Fixed bug - numbers beginning with a period were not being parses as numbers
+ - Modified string() function to return str() of an int() when expr was a whole number
+ - Modified replace() function to emulate Java regular expression behaviour (the FEEL standard)
+ - Fixed bug - variable names, matching words in function names, corrupted FEEL expressions
+ - Fixed bug - time functions were not supporting decimal seconds (microseconds)
+ - Fixed bug in concatenate() function
+ - Fixed insert() and remove() functions - now returns copy() - doesn't modify source
+ - Fixed bug - negative start position in substring() function
+ - Made 'item' optional in List filters
+ - Added limited support for 'some/every in ... satifies expression'. 'expression' must be 'name relop expr'.
+ - Fixed bug in math() - wrapped try/except for math failures - e.g. sqrt(-1.0)
+### 1.3.8 - Fixed Feb 29 bug - released to PyPI
  - Addition and subtraction of years from a valid leap year date would fail
 ### 1.3.7 - Bug fix - released to PyPI
 * Made arithmetic operators invalid in names
