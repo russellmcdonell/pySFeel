@@ -299,8 +299,16 @@ pySFeel has support all the standard FEEL built-in functions [except sort()] wit
 +-------------------------------+---------------------+---------------------------------------------------------------+
 | week of year(date)            | date, date and time |                                                               |
 +-------------------------------+---------------------+---------------------------------------------------------------+
+| sort(list, function(x,y) expr)+ list                +                                                               |
++-------------------------------+---------------------+---------------------------------------------------------------+
 
-**Note:** the sort() function is not supported
+**Note:** The support for the sort() function is very, very limited. Only the anonymous form is supported (function is defined within the sort call).
+Also, 'expr' is limited to 'name0 < name1' or 'name0 > name1' (ascending or decending). However, list can be a list of Contexts, in which case
+name0 and name1 must be 'name0.attr' and 'name1.attr' and 'attr' must be the same attribute for both 'name0' and 'name1'.
+
+**Note:** The support for 'some/every in ... satifies expression' is also limited in that 'expression' must be 'name relop expr'.
+Again, the 'name.attr' form is suported where a list of Contexts is being tested.
+
 
 Indices and tables
 ------------------

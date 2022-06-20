@@ -9,6 +9,7 @@ import dateutil.parser, dateutil.tz
 import copy
 import math
 import statistics
+from operator import itemgetter, attrgetter
 
 class SFeelLexer(Lexer):
     tokens = {BOOLEAN, DATEFUNC, TIMEFUNC, DATEANDTIMEFUNC,
@@ -29,6 +30,7 @@ class SFeelLexer(Lexer):
               BEFOREFUNC, AFTERFUNC, MEETSFUNC, METBYFUNC, OVERLAPSFUNC, OVERLAPSBEFOREFUNC, OVERLAPSAFTERFUNC,
               FINISHESFUNC, FINISHEDBYFUNC, INCLUDESFUNC, DURINGFUNC, STARTSFUNC, STARTEDBYFUNC, COINCIDESFUNC,
               DAYOFYEARFUNC, DAYOFWEEKFUNC, MONTHOFYEARFUNC, WEEKOFYEARFUNC,
+              SORTFUNC, FUNCTIONFUNC,
               NAME, ATSTRING, STRING, NULL,
               LBRACKET, RBRACKET,
               EQUALS, NOTEQUALS, LTTHANEQUAL, GTTHANEQUAL, LTTHAN, GTTHAN,
@@ -127,6 +129,8 @@ class SFeelLexer(Lexer):
     DAYOFWEEKFUNC = r'day of week\('
     MONTHOFYEARFUNC = r'month of year\('
     WEEKOFYEARFUNC = r'week of year\('
+    SORTFUNC = r'sort\('
+    FUNCTIONFUNC = r'function\('
     DTDURATION = r'-?P((([0-9]+D)(T(([0-9]+H)([0-9]+M)?([0-9]+(\.[0-9]+)?S)?|([0-9]+M)([0-9]+(\.[0-9]+)?S)?|([0-9]+(\.[0-9]+)?S)))?)|(T(([0-9]+H)([0-9]+M)?([0-9]+(\.[0-9]+)?S)?|([0-9]+M)([0-9]+(\.[0-9]+)?S)?|([0-9]+(\.[0-9]+)?S))))'
     YMDURATION = r'-?P[0-9]+Y[0-9]+M'
     NAME = (u'[?A-Z_a-z' +
@@ -3669,6 +3673,75 @@ class SFeelParser(Parser):
             (year, week, weekday) = p.expr.isocalendar()
             return week
         return False
+
+
+    def sortFunc(self, thisList, name0, name1, name2, relop, name3):
+        ''' Sort a list according to an anonymous function '''
+        if not isinstance(thisList, list):
+            return None
+        if len(thisList) == 0:
+            return []
+        if isinstance(thisList[0], dict):
+            reversed = False
+            attrib = ''
+            if not name2.startswith(name0 + '.'):
+                if (not name3.startswith(name0 + '.')) or (not name2.startswith(name1 + '.')):
+                    return None
+                reversed = True
+                attrib = name3[len(name0) + 1:]
+                if attrib == '':
+                    return None
+                if attrib != name2[len(name1) + 1:]:
+                    return None
+            else:
+                if not name3.startswith(name1 + '.'):
+                    return None
+                attrib = name2[len(name0) + 1:]
+                if attrib == '':
+                    return None
+                if attrib != name3[len(name1) + 1:]:
+                    return None
+            try:
+                if relop == '<':
+                    if reversed:
+                        return sorted(thisList, key=itemgetter(attrib), reverse=True)
+                    else:
+                        return sorted(thisList, key=itemgetter(attrib))
+                else:
+                    if reversed:
+                        return sorted(thisList, key=itemgetter(attrib))
+                    else:
+                        return sorted(thisList, key=itemgetter(attrib), reverse=True)
+            except:
+                return None
+        else:
+            if name0 != name2:
+                if (name0 != name3) or (name1 != name2):
+                    return None
+            elif name1 != name3:
+                return None
+            try:
+                if relop == '<':
+                    if name0 == name2:
+                        return sorted(thisList)
+                    else:
+                        return sorted(thisList, reverse=True)
+                else:
+                    if name0 == name2:
+                        return sorted(thisList, reverse=True)
+                    else:
+                        return sorted(thisList)
+            except:
+                return None
+        pass
+
+    @_('SORTFUNC expr COMMA FUNCTIONFUNC NAME COMMA NAME RPAREN NAME GTTHAN NAME RPAREN')
+    def expr(self, p):
+        return self.sortFunc(p.expr, p.NAME0, p.NAME1, p.NAME2, p.GTTHAN, p.NAME3)
+
+    @_('SORTFUNC expr COMMA FUNCTIONFUNC NAME COMMA NAME RPAREN NAME LTTHAN NAME RPAREN')
+    def expr(self, p):
+        return self.sortFunc(p.expr, p.NAME0, p.NAME1, p.NAME2, p.LTTHAN, p.NAME3)
 
     @_('BOOLEAN')
     def expr(self, p):

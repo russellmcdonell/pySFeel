@@ -2840,5 +2840,45 @@ class TestClass:
         assert 'errors' not in status
         assert retval == True
 
+    def test_sort1(self):
+        SFeel =  'nums <- [1, 3, 5, 7, 9, 2, 4, 6, 8]'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        SFeel = 'sort(nums, function(x,y) x<y)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
+        SFeel = 'sort(nums, function(x,y) y>x)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
+        SFeel = 'sort(nums, function(x,y) y<x)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == [9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0]
+        SFeel = 'sort(nums, function(x,y) x>y)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == [9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0]
 
+    def test_sort2(self):
+        SFeel =  'dicts <- [{a:1, b:3}, {a:5, b:7}, {a:9, b:2}, {a:4, b:6}]'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        SFeel = 'sort(dicts, function(x,y) x.a<y.a)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == [{'a': 1.0, 'b': 3.0}, {'a': 4.0, 'b': 6.0}, {'a': 5.0, 'b': 7.0}, {'a': 9.0, 'b': 2.0}]
+        SFeel = 'sort(dicts, function(x,y) y.a>x.a)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == [{'a': 1.0, 'b': 3.0}, {'a': 4.0, 'b': 6.0}, {'a': 5.0, 'b': 7.0}, {'a': 9.0, 'b': 2.0}]
+        SFeel = 'sort(dicts, function(x,y) y.a<x.a)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == [{'a': 9.0, 'b': 2.0}, {'a': 5.0, 'b': 7.0}, {'a': 4.0, 'b': 6.0}, {'a': 1.0, 'b': 3.0}]
+        SFeel = 'sort(dicts, function(x,y) x.a>y.a)'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert retval == [{'a': 9.0, 'b': 2.0}, {'a': 5.0, 'b': 7.0}, {'a': 4.0, 'b': 6.0}, {'a': 1.0, 'b': 3.0}]
 

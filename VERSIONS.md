@@ -1,3 +1,5 @@
+### 1.3.10 - Added limited support for the sort() function
+ - Added limited support for the sort() function - only the anonymous form [ sort(expr, function(name0, name1) expression)) ]. And 'expression' is limited to 'name0 < name1' or 'name0 > name1'. If the list to be sorted ('expr) is a list of Contexts, the name0 and name1 must take the form of name0.attr and name1.attr, and 'attr' must be the same attribute for both name0 and name1.
 ### 1.3.9 - Fixed bugs found when testing with tck-DMN - released to PyPI
  - Fixed bug - numbers beginning with a period were not being parses as numbers
  - Modified string() function to return str() of an int() when expr was a whole number
