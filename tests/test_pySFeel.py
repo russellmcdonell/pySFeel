@@ -31,13 +31,13 @@ class TestClass:
         assert retval == True
     
     def test_and3(self):
-        SFeel = 'true and 1'
+        SFeel = 'true and "otherwise"'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
         assert retval == None
     
     def test_or3(self):
-        SFeel = 'true or 1'
+        SFeel = 'true or "otherwise"'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
         assert retval == True
@@ -85,7 +85,7 @@ class TestClass:
         assert retval == True
     
     def test_and8(self):
-        SFeel = '1 and false'
+        SFeel = '"otherwise" and false'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
         assert retval == False
@@ -508,7 +508,7 @@ class TestClass:
         SFeel = ']3 .. 5)'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == (']', 3, 5, ')')
+        assert retval == ('(', 3, 5, ')')
 
     def test_interval3(self):
         SFeel = '[3 .. 5)'
@@ -520,13 +520,13 @@ class TestClass:
         SFeel = '(3 .. 5['
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == ('(', 3, 5, '[')
+        assert retval == ('(', 3, 5, ')')
 
     def test_interval5(self):
         SFeel = ']3 .. 5]'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == (']', 3, 5, ']')
+        assert retval == ('(', 3, 5, ']')
 
     def test_time(self):
         SFeel = '13:15:17'
@@ -594,7 +594,8 @@ class TestClass:
         SFeel = 'time("00:01:00@Etc/UTC")'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == datetime.time(hour=0, minute=1, second=0)
+        tzinfo = dateutil.tz.UTC
+        assert retval == datetime.time(hour=0, minute=1, second=0, tzinfo=tzinfo)
 
     def test_number1(self):
         SFeel = 'number("1,000.0", ",", ".")'
@@ -738,7 +739,7 @@ class TestClass:
         SFeel = 'string(date and time("2012-12-31T11:00:00Z"))'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == '2012-12-31T11:00:00+00:00'
+        assert retval == '2012-12-31T11:00:00@UTC'
 
     def test_string6(self):
         SFeel = 'string(P2D)'
@@ -996,7 +997,7 @@ class TestClass:
         SFeel = 'all(true, null, false)'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == False
+        assert retval == None
 
     def test_all6(self):
         SFeel = 'all(0)'
@@ -1005,10 +1006,10 @@ class TestClass:
         assert retval == None
 
     def test_any1(self):
-        SFeel = 'any([false, null, true])'
+        SFeel = 'any([false, "otherwise", true])'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == True
+        assert retval == None
 
     def test_any2(self):
         SFeel = 'any([true])'
@@ -1329,13 +1330,13 @@ class TestClass:
         assert retval == [3, 4]
 
     def test_listitem2(self):
-        SFeel = '[{x:1, y:2}, {x:2, y:3}][item x=1]'
+        SFeel = '[{x:1, y:2}, {x:2, y:3}][item.x=1]'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
         assert retval == [{'x':1, 'y':2}]
 
     def test_listitem3(self):
-        SFeel = '[{x:1, y:2}, {x:null, y:3}][item x<2]'
+        SFeel = '[{x:1, y:2}, {x:null, y:3}][item.x<2]'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
         assert retval == [{'x':1, 'y':2}]
@@ -2448,7 +2449,7 @@ class TestClass:
         SFeel = 'date(2005, 1, 9).weekday'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == datetime.date(year=2005, month=1, day=9).weekday()
+        assert retval == datetime.date(year=2005, month=1, day=9).isoweekday()
 
     def test_edotweekday2(self):
         SFeel = 'thisDate <- date(2005, 1, 9)'
@@ -2458,19 +2459,19 @@ class TestClass:
         SFeel = 'thisDate.weekday'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == datetime.date(year=2005, month=1, day=9).weekday()
+        assert retval == datetime.date(year=2005, month=1, day=9).isoweekday()
 
     def test_edotweekday3(self):
         SFeel = '(2005-01-09).weekday'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == datetime.date(year=2005, month=1, day=9).weekday()
+        assert retval == datetime.date(year=2005, month=1, day=9).isoweekday()
 
     def test_edotweekday4(self):
         SFeel = 'date and time("2005-01-09T12:00:15").weekday'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15).weekday()
+        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15).isoweekday()
 
     def test_edotweekday5(self):
         SFeel = 'thisDateTime <- date and time(date(2005, 1, 9), time(12, 0, 15))'
@@ -2480,19 +2481,19 @@ class TestClass:
         SFeel = 'thisDateTime.weekday'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15).weekday()
+        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15).isoweekday()
 
     def test_edotweekday6(self):
         SFeel = '(2005-01-09T12:00:15).weekday'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15).weekday()
+        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15).isoweekday()
 
     def test_edotweekday7(self):
         SFeel = '@"2005-01-09T12:00:15".weekday'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15).weekday()
+        assert retval == datetime.datetime(year=2005, month=1, day=9, hour=12, minute=0, second=15).isoweekday()
 
     def test_edothour1(self):
         SFeel = 'time(12, 0, 15).hour'
@@ -2664,13 +2665,13 @@ class TestClass:
         SFeel = '(12:00:15@Australia/Perth).timezone'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == 'AWST'
+        assert retval == 'Australia/Perth'
 
     def test_edottimezone4(self):
         SFeel = 'date and time("2005-01-09T12:00:15@Australia/Perth").timezone'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == 'AWST'
+        assert retval == 'Australia/Perth'
 
     def test_edottimezone5(self):
         SFeel = 'thisDateTime <- date and time(date(2005, 1, 9), time(12, 0, 15, @"PT8H"))'
@@ -2686,13 +2687,13 @@ class TestClass:
         SFeel = '(2005-01-09T12:00:15@Australia/Perth).timezone'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == 'AWST'
+        assert retval == 'Australia/Perth'
 
     def test_edottimezone7(self):
         SFeel = '@"2005-01-09T12:00:15@Australia/Perth".timezone'
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
-        assert retval == 'AWST'
+        assert retval == 'Australia/Perth'
 
     def test_edottimeoffset1(self):
         SFeel = 'time(12, 0, 15, @"PT8H").time offset'
@@ -2881,4 +2882,24 @@ class TestClass:
         (status, retval) = parser.sFeelParse(SFeel)
         assert 'errors' not in status
         assert retval == [{'a': 9.0, 'b': 2.0}, {'a': 5.0, 'b': 7.0}, {'a': 4.0, 'b': 6.0}, {'a': 1.0, 'b': 3.0}]
+
+    def test_now(self):
+        SFeel =  'now()'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert isinstance(retval, datetime.datetime)
+        now = datetime.datetime.now()
+        diff = retval - now
+        assert diff.microseconds < 5
+
+    def test_today(self):
+        SFeel =  'today()'
+        (status, retval) = parser.sFeelParse(SFeel)
+        assert 'errors' not in status
+        assert isinstance(retval, datetime.date)
+        today = datetime.date.today()
+        assert retval == today
+
+        
+
 

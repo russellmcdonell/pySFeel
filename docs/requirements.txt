@@ -1,6 +1,7 @@
 sly
 datetime
 python-dateutil
+pytz
 statistics
 pySFeel
 docutils<0.18

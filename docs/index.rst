@@ -81,6 +81,18 @@ This will return False
 
 This will return [2,3]
 
+Dot operators
+-------------
+All the dot operators are supported, however '.time offset', '.start included' and '.end included' can be ambiguous (because of the embedded space).
+Hence the variants '.time_offset', '.start_included', '.end_included' are supported.
+
+    thisDateTime.time offset
+
+will fail because thisDateTime.time looks like a valid FEEL variable name. However the following two alternatives will work
+
+    thisDateTime.time_offset
+    (thisDateTime).time offset
+
 Usage
 -----
 
@@ -99,7 +111,7 @@ Usage
 
 Built-in Functions
 ------------------
-pySFeel has support all the standard FEEL built-in functions [except sort()] with some differences because pySFeel is a Python implementation.
+pySFeel has support all the standard FEEL built-in functions with some differences because pySFeel is a Python implementation.
 
 +-------------------------------+---------------------+---------------------------------------------------------------+
 | Name(paramters)               | Parameter Domain    | pySFeel implementation notes                                  |
@@ -306,7 +318,7 @@ pySFeel has support all the standard FEEL built-in functions [except sort()] wit
 Also, 'expr' is limited to 'name0 < name1' or 'name0 > name1' (ascending or decending). However, list can be a list of Contexts, in which case
 name0 and name1 must be 'name0.attr' and 'name1.attr' and 'attr' must be the same attribute for both 'name0' and 'name1'.
 
-**Note:** The support for 'some/every in ... satifies expression' is also limited in that 'expression' must be 'name relop expr'.
+**Note:** The support for 'some/every in ... satifies expression' is also limited in that 'expression' must be 'name relop expr' or 'odd(name)' or 'even(name)'.
 Again, the 'name.attr' form is suported where a list of Contexts is being tested.
 
 

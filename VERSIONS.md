@@ -1,4 +1,27 @@
-### 1.3.10 - Added limited support for the sort() function
+### 1.4.0 - BREAKING Bug fix release - released to PyPI
+ - Changed parsing so that ranges with closed intervals are returned with round brackets    
+   (reverse facing square brackets are allowed on input, but will be converted to their equivalent round bracket form)    
+   **NOTE BREAKING CHANGE:** this effected some of the tests in test_pySFeel.py
+ - Fixed equality test - now returns 'null' (Python value None) if values are of different data types    
+   **NOTE BREAKING CHANGE:** this may effected some existing tests
+ - Bug fix - string() function now returns timezones for datetimes/time that have a timezone
+   **NOTE BREAKING CHANGE:** this may effected some existing implementations
+ - Bug fix - .weekday now returns isoweekday() (now 1 - 7, was 0 - 6)
+   **NOTE BREAKING CHANGE:** this may effected some existing implementations
+ - Bug fix - any()/all() functions return False/True for empty lists.
+ - Bug fix - Context filters were expecting '[item x=1]'. Correct syntax is '[item.x=1]'. Old syntax supported for backward compatibility.
+ - Bug fix - fixed regex pattern for year and month durations (when months is missing)
+ - Fixed bug - strings were not being recognised as valid names in Contexts
+ - Added support fo single endpoint and operator ranges
+ - Added singleton list conversions for parameters passed to built-in functions
+ - Fix list indexing bugs ([true] returns full list, [-n] returns item from end of list)
+ - Added support for 'instance of'
+ - Improved the parsing of year month and date time durations
+ - Added support for named parameters in built-in functions
+ - Added support for context scoped variables - {a:1,b:a+1} - 'a' is a valid variable, but only inside the context and only after it has been defined.
+ - Added support for Java like comments (// to end of line, /* .. */)
+ - Added support for DMN 1.4 functions today() and now()
+### 1.3.10 - Added limited support for the sort() function - released to PyPI
  - Added limited support for the sort() function - only the anonymous form [ sort(expr, function(name0, name1) expression)) ]. And 'expression' is limited to 'name0 < name1' or 'name0 > name1'. If the list to be sorted ('expr) is a list of Contexts, the name0 and name1 must take the form of name0.attr and name1.attr, and 'attr' must be the same attribute for both name0 and name1.
 ### 1.3.9 - Fixed bugs found when testing with tck-DMN - released to PyPI
  - Fixed bug - numbers beginning with a period were not being parses as numbers
