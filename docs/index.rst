@@ -313,6 +313,10 @@ pySFeel has support all the standard FEEL built-in functions with some differenc
 +-------------------------------+---------------------+---------------------------------------------------------------+
 | sort(list, function(x,y) expr)+ list                +                                                               |
 +-------------------------------+---------------------+---------------------------------------------------------------+
+| now()                         +                     +                                                               |
++-------------------------------+---------------------+---------------------------------------------------------------+
+| today()                       +                     +                                                               |
++-------------------------------+---------------------+---------------------------------------------------------------+
 
 **Note:** The support for the sort() function is very, very limited. Only the anonymous form is supported (function is defined within the sort call).
 Also, 'expr' is limited to 'name0 < name1' or 'name0 > name1' (ascending or decending). However, list can be a list of Contexts, in which case

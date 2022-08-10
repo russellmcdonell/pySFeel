@@ -1,3 +1,5 @@
+### 1.4.1 - Removed redundant include of argparse - released to PyPI
+ - Updated list of built-in function in documenation to include now() and today()
 ### 1.4.0 - BREAKING Bug fix release - released to PyPI
  - Changed parsing so that ranges with closed intervals are returned with round brackets    
    (reverse facing square brackets are allowed on input, but will be converted to their equivalent round bracket form)    

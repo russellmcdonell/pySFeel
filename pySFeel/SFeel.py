@@ -2,7 +2,6 @@
 # SFeel.py
 # -----------------------------------------------------------------------------
 
-from numpy import False_
 from sly import Lexer, Parser
 import re
 import datetime
