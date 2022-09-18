@@ -1,5 +1,10 @@
+### 1.4.2 - Minor bug fix release - release to PyPi
+ - Restricted timezone offsets to 00:00 - 14:00
+ - Fixed bug in .hour, .minute and .second attributes (now return float())
 ### 1.4.1 - Removed redundant include of argparse - released to PyPI
  - Updated list of built-in function in documenation to include now() and today()
+ - Bug fix in . operator evaluation
+ - Allowed +/- 23:59 as UTC offset in time values
 ### 1.4.0 - BREAKING Bug fix release - released to PyPI
  - Changed parsing so that ranges with closed intervals are returned with round brackets    
    (reverse facing square brackets are allowed on input, but will be converted to their equivalent round bracket form)    

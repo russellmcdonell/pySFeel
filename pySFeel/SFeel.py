@@ -195,7 +195,7 @@ class SFeelLexer(Lexer):
     STRING = r'"(' + r"\\'" + r'|\\"|\\\\|\\n|\\r|\\t|\\u[0-9]{4}|[^"])*"'
     DATETIME = r'([1-9][0-9]{3,}|0[0-9]{3})-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T(([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\.[0-9]+)?|(24:00:00(\.0+)?))(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)|@[A-Za-z0-9_-]+/[A-Za-z0-9_-]+)?'
     DATE = r'([1-9][0-9]{3,}|0[0-9]{3})-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])(Z|(\+|-)(0[0-9]|1[0-3]):[0-5][0-9]|14:00)?'
-    TIME = r'(([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\.[0-9]+)?|(24:00:00(\.0+)?))(Z|(\+|-)(0[0-9]|1[0-3]):[0-5][0-9]|14:00|@[A-Za-z0-9_-]+/[A-Za-z0-9_-]+)?'
+    TIME = r'(([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\.[0-9]+)?|(24:00:00(\.0+)?))(Z|(\+|-)([0-1][0-9]|2[0-3]):[0-5][0-9]|@[A-Za-z0-9_-]+/[A-Za-z0-9_-]+)?'
     NUMBER = r'(\.\d+|\d+(\.(\d+|\s)){0,1})'
 
     # Ignored patterns
@@ -1419,11 +1419,11 @@ class SFeelParser(Parser):
                     return None
         elif isinstance(thisList, datetime.time):
             if key == 'hour':
-                return thisList.hour
+                return float(thisList.hour)
             elif key == 'minute':
-                return thisList.minute
+                return float(thisList.minute)
             elif key == 'second':
-                return thisList.second
+                return float(thisList.second)
             elif key == 'timezone':
                 if thisList.tzinfo is None:
                     return None
